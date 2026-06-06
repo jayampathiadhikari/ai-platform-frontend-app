@@ -18,13 +18,13 @@ export function parseAgentDirective(ticket: JiraTicket): AgentDirective | null {
         if (!body.startsWith("@agent")) continue;
 
         const repoMatch = body.match(/repo-url:\s*"([^"]+)"/);
-        const branchMatch = body.match(/checkout-branch:\s*"([^"]+)"/);
+        const branchMatch = body.match(/base-branch:\s*"([^"]+)"/);
 
         if (!repoMatch || !branchMatch) continue;
 
         return {
             repoUrl: repoMatch[1]!,
-            checkoutBranch: branchMatch[1]!,
+            baseBranch: branchMatch[1]!,
         };
     }
     return null;

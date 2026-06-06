@@ -1,12 +1,13 @@
 
 
-import type { WorkspaceContext } from "./types.js";
+import type { AgentDirective, WorkspaceContext } from "./types.js";
 import { parseAgentDirective, createWorkspaceDir } from "./helpers.js";
 import { mockJiraTickets } from "../context-provider/mock-jira-tickets.js";
+import type { JiraStory } from "../workspace-manager/types.js";
+import { setupWorkspace } from "../workspace-manager/workspace-manager.js";
+import type { JobResult } from "../agents/types.js";
+import { runAgent } from "../agents/dev-agent.js";
 
-// ---------------------------------------------------------------------------
-// Orchestrator
-// ---------------------------------------------------------------------------
 
 /**
  * Takes a Jira ticket ID and a job ID, resolves the ticket, parses the
@@ -17,7 +18,7 @@ import { mockJiraTickets } from "../context-provider/mock-jira-tickets.js";
 export async function runJob(
     jiraId: string,
     jobId: string
-): Promise<WorkspaceContext> {
+): Promise<void> {
     // 1. Resolve ticket
     const ticket = mockJiraTickets.find((t) => t.id === jiraId);
     if (!ticket) {
@@ -25,29 +26,29 @@ export async function runJob(
     }
 
     // 2. Parse @agent directive
-    const directive = parseAgentDirective(ticket);
+    const directive: AgentDirective | null = parseAgentDirective(ticket);
     if (!directive) {
         throw new Error(
             `No valid @agent directive found in comments for ticket "${jiraId}".`
         );
     }
 
-    // 3. Create temp workspace
-    const workspacePath = await createWorkspaceDir(jobId);
-
-    const ctx: WorkspaceContext = {
-        jobId,
-        jiraId,
-        ticket,
-        directive,
-        workspacePath,
+    const jiraStory: JiraStory = {
+        id: ticket.id,
+        projectId: "project-1",
+        tenantId: "tenant",
+        repoUrl: directive.repoUrl,
+        baseBranch: directive.baseBranch,
+        taskMd: ticket.description,
+        claudeMd: "",
+        description: ticket.description,
+        retryCount: 0,
+        checkpointRef: "",
     };
 
-    console.log(`[orchestrator] Job "${jobId}" initialised`);
-    console.log(`  Ticket   : ${ticket.id} — ${ticket.title}`);
-    console.log(`  Repo     : ${directive.repoUrl}`);
-    console.log(`  Branch   : ${directive.checkoutBranch}`);
-    console.log(`  Workspace: ${workspacePath}`);
+    const workspace = await setupWorkspace(jiraStory);
 
-    return ctx;
+    const result: JobResult = await runAgent(jiraStory, workspace);
+
+    console.log("[orchestrator] Job result: ", result);
 }

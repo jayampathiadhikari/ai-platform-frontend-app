@@ -24,6 +24,9 @@ export async function gitClone(
     if (options.depth !== undefined) {
         args.push("--depth", String(options.depth));
     }
+    if (options.singleBranch) {
+        args.push("--single-branch");
+    }
 
     args.push(repoUrl);
 
@@ -63,6 +66,38 @@ export async function gitCreateAndCheckout(
     const args = ["checkout", "-b", branchName];
     if (startPoint) args.push(startPoint);
     return git(args, repoDir);
+}
+
+/**
+ * Set a local git config value inside an existing repo.
+ * Equivalent to `git -C <repoDir> config <key> <value>`.
+ *
+ * @param key     - Config key, e.g. "user.email".
+ * @param value   - Config value.
+ * @param repoDir - Absolute path to the local repository.
+ */
+export async function gitConfig(
+    key: string,
+    value: string,
+    repoDir: string
+): Promise<GitResult> {
+    return git(["config", key, value], repoDir);
+}
+
+/**
+ * Push a local branch to a remote.
+ * Equivalent to `git push <remote> <branch>`.
+ *
+ * @param branch  - Local branch name to push.
+ * @param repoDir - Absolute path to the local repository.
+ * @param remote  - Remote name (defaults to "origin").
+ */
+export async function gitPush(
+    branch: string,
+    repoDir: string,
+    remote = "origin"
+): Promise<GitResult> {
+    return git(["push", remote, branch], repoDir);
 }
 
 // ---------------------------------------------------------------------------

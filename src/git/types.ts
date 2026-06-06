@@ -10,6 +10,8 @@ export interface GitCloneOptions {
     branch?: string;
     /** Limit clone depth (shallow clone). */
     depth?: number;
+    /** Only fetch the specified branch — keeps the clone lean (`--single-branch`). */
+    singleBranch?: boolean;
 }
 
 export interface GitCheckoutOptions {

@@ -22,6 +22,9 @@ export class DevAgent implements Agent {
         console.log(`[agent] [${workspace.jobId}] Limits — maxBudget=$${this.maxBudgetUsd} maxTurns=${this.maxTurns}`);
 
         const options: Options = {
+            // Use the cheapest Claude model to minimise cost per job
+            model: "claude-haiku-4-5",
+
             // Working directory locked to this job's isolated worktree
             cwd: workspace.jobDir,
 

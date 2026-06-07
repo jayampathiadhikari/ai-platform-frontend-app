@@ -1,12 +1,12 @@
 
 
-import type { AgentDirective, WorkspaceContext } from "./types.js";
-import { parseAgentDirective, createWorkspaceDir } from "./helpers.js";
+import type { AgentDirective } from "./types.js";
+import { parseAgentDirective } from "./helpers.js";
 import { mockJiraTickets } from "../context-provider/mock-jira-tickets.js";
 import type { JiraStory } from "../workspace-manager/types.js";
 import { setupWorkspace } from "../workspace-manager/workspace-manager.js";
-import type { JobResult } from "../agents/types.js";
-import { runAgent } from "../agents/dev-agent.js";
+import type { Agent, JobResult } from "../agents/types.js";
+import { DevAgent } from "../agents/dev-agent.js";
 
 
 /**
@@ -48,7 +48,8 @@ export async function runJob(
 
     const workspace = await setupWorkspace(jiraStory);
 
-    const result: JobResult = await runAgent(jiraStory, workspace);
+    const agent: Agent = new DevAgent();
+    const result: JobResult = await agent.run(jiraStory, workspace);
 
     console.log("[orchestrator] Job result: ", result);
 }

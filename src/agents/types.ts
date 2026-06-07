@@ -1,3 +1,5 @@
+import type { JiraStory, Workspace } from "../workspace-manager/types.js";
+
 export interface JobResult {
   storyId: string;
   verdict: "PASS" | "FAIL" | "PARTIAL";
@@ -11,4 +13,8 @@ export interface ReviewVerdict {
   verdict: "PASS" | "FAIL" | "PARTIAL";
   reason: string;
   prUrl?: string;
+}
+
+export interface Agent {
+    run(story: JiraStory, workspace: Workspace): Promise<JobResult>;
 }

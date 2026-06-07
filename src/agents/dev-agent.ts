@@ -2,6 +2,7 @@ import { query, type Options } from "@anthropic-ai/claude-agent-sdk";
 import type { SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { Agent, JobResult, ReviewVerdict } from "./types.ts";
 import type { JiraStory, Workspace } from "../workspace-manager/types.js";
+import { createPullRequest } from "../git/github.js";
 
 
 const MAX_BUDGET_USD = Number(process.env.MAX_BUDGET_USD ?? "3.00");
@@ -75,10 +76,26 @@ export class DevAgent implements Agent {
         // Parse the REVIEW.json verdict the agent is instructed to write
         const verdict = await this.parseVerdict(workspace.jobDir, messages);
 
+        // Open the PR via the GitHub API now that the agent has committed & pushed
+        let prUrl: string | undefined;
+        try {
+            const pr = await createPullRequest({
+                remoteUrl: workspace.remoteUrl,
+                head: workspace.branch,
+                base: story.baseBranch,
+                title: `[${story.id}] ${story.description}`,
+                body: `Automated implementation of Jira story ${story.id}.`,
+            });
+            prUrl = pr.url;
+            console.log(`[agent] PR opened: ${prUrl}`);
+        } catch (err) {
+            console.error(`[agent] Failed to open PR for ${workspace.jobId}:`, err);
+        }
+
         return {
             storyId: story.id,
             verdict: verdict.verdict,
-            ...(verdict.prUrl !== undefined && { prUrl: verdict.prUrl }),
+            ...(prUrl !== undefined && { prUrl }),
             ...(verdict.reason !== undefined && { reason: verdict.reason }),
             costUsd,
             turns,
@@ -118,9 +135,11 @@ Both files are in your current working directory.
 
 When you are done:
 1. Commit your changes on the current branch
-2. Open a pull request against ${story.baseBranch}
+2. Push the branch to origin
 3. Write a REVIEW.json file in the workspace root with this shape:
-   { "verdict": "PASS" | "FAIL" | "PARTIAL", "reason": "...", "prUrl": "..." }
+   { "verdict": "PASS" | "FAIL" | "PARTIAL", "reason": "..." }
+
+Do NOT open the pull request yourself — the platform will do that automatically.
 
 Begin by reading TASK.md.
 `.trim();

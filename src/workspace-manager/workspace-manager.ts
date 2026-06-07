@@ -2,6 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import type { JiraStory, Workspace } from "./types.js";
 import { gitClone, gitConfig, gitCreateAndCheckout, gitPush } from "../git/git.js";
+import { GIT_BRANCH_PREFIX } from "../constants.js";
 
 const JOBS_DIR = process.env.JOBS_DIR ?? "/workspace/jobs";
 
@@ -19,7 +20,7 @@ export async function setupWorkspace(story: JiraStory): Promise<Workspace> {
     const jobId = `job-${story.id}-${Date.now()}`;
     const jobDir = path.join(JOBS_DIR, jobId);
     // Branch name: agent/<story-id> — predictable, shows up clearly in GitHub PR list
-    const branch = `agent/${story.id}`;
+    const branch = `${GIT_BRANCH_PREFIX}${story.id}`;
     const remoteUrl = buildRemoteUrl(story.repoUrl);
 
     await fs.mkdir(JOBS_DIR, { recursive: true });

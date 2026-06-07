@@ -2,6 +2,7 @@ import { query, type Options } from "@anthropic-ai/claude-agent-sdk";
 import type { SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { Agent, JobResult, ReviewVerdict } from "./types.ts";
 import type { JiraStory, Workspace } from "../workspace-manager/types.js";
+import { bashGuardHook } from "./bash-guard.js";
 
 const MAX_BUDGET_USD = Number(process.env.MAX_BUDGET_USD ?? "3.00");
 const MAX_TURNS = Number(process.env.MAX_TURNS ?? "60");
@@ -34,6 +35,11 @@ export class DevAgent implements Agent {
 
             // Tools scoped to what a dev agent actually needs
             allowedTools: ["Read", "Edit", "Write", "Bash", "Glob", "Grep"],
+
+            // Intercept Bash calls before execution to block dangerous commands
+            hooks: {
+                PreToolUse: [bashGuardHook()],
+            },
         };
 
         let resultMessage: SDKResultMessage | undefined;

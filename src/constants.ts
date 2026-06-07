@@ -1,0 +1,1 @@
+export const GIT_BRANCH_PREFIX = "agent/";

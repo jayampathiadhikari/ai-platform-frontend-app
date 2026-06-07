@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
+import { createHash } from "crypto";
 import type { JiraStory, Workspace } from "./types.js";
 import { gitClone, gitConfig, gitCreateAndCheckout, gitPush } from "../git/git.js";
 import {
@@ -58,6 +59,8 @@ export async function setupWorkspace(story: JiraStory): Promise<Workspace> {
     console.log(`[workspace] [${jobId}] Writing TASK.md and CLAUDE.md`);
     await fs.writeFile(path.join(jobDir, "TASK.md"), story.taskMd, "utf8");
     await fs.writeFile(path.join(jobDir, "CLAUDE.md"), story.claudeMd, "utf8");
+    const claudeHash = createHash("sha256").update(story.claudeMd).digest("hex").slice(0, 8);
+    console.log(`[workspace] [${jobId}] CLAUDE.md written — sha256=${claudeHash} (${story.claudeMd.length} bytes)`);
 
     console.log(`[workspace] [${jobId}] Ready on branch ${branch}`);
     return { jobId, jobDir, branch, repo: story.repoUrl, remoteUrl };

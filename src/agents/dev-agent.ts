@@ -13,7 +13,7 @@ export class DevAgent implements Agent {
     private readonly maxTurns: number;
 
     constructor(maxBudgetUsd = MAX_BUDGET_USD, maxTurns = MAX_TURNS) {
-        this.maxBudgetUsd = maxBudgetUsd || 2;
+        this.maxBudgetUsd = maxBudgetUsd || 0.5;
         this.maxTurns = maxTurns;
     }
 
@@ -63,6 +63,15 @@ export class DevAgent implements Agent {
                     }
                     if (block.type === "tool_use") {
                         console.log(`[agent] [${workspace.jobId}] Tool call: ${block.name} — input: ${JSON.stringify(block.input, null, 2)}`);
+                        // Confirm CLAUDE.md was read by the agent
+                        const input = block.input as Record<string, unknown>;
+                        if (
+                            block.name === "Read" &&
+                            typeof input.file_path === "string" &&
+                            input.file_path.endsWith("CLAUDE.md")
+                        ) {
+                            console.log(`[agent] [${workspace.jobId}] ✅ CLAUDE.md read confirmed — agent has received operational guidelines`);
+                        }
                     }
                 }
             }

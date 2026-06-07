@@ -5,7 +5,8 @@ import { fileURLToPath } from "url";
 import path from "path";
 import type { AgentDirective } from "./types.js";
 import { parseAgentDirective } from "./helpers.js";
-import { mockJiraTickets } from "../context-provider/mock-jira-tickets.js";
+import { MockJiraContextProvider } from "../context-provider/context-provider.js";
+import type { ContextProvider } from "../context-provider/types.js";
 import type { JiraStory, Workspace } from "../workspace-manager/types.js";
 import { setupWorkspace } from "../workspace-manager/workspace-manager.js";
 import type { Agent, JobResult } from "../agents/types.js";
@@ -26,10 +27,11 @@ const CLAUDE_MD_PATH = path.resolve(
  */
 export async function runJob(
     jiraId: string,
-    jobId: string
+    jobId: string,
+    contextProvider: ContextProvider = new MockJiraContextProvider()
 ): Promise<void> {
     // 1. Resolve ticket
-    const ticket = mockJiraTickets.find((t) => t.id === jiraId);
+    const ticket = await contextProvider.getTicket(jiraId);
     if (!ticket) {
         throw new Error(`Jira ticket "${jiraId}" not found.`);
     }

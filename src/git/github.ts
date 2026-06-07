@@ -73,5 +73,5 @@ function parseOwnerRepo(remoteUrl: string): { owner: string; repo: string } {
     if (!match) {
         throw new Error(`Cannot parse owner/repo from remote URL: ${remoteUrl}`);
     }
-    return { owner: match[1], repo: match[2] };
+    return { owner: match[1]!, repo: match[2]! };
 }

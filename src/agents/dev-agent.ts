@@ -12,7 +12,7 @@ export class DevAgent implements Agent {
     private readonly maxTurns: number;
 
     constructor(maxBudgetUsd = MAX_BUDGET_USD, maxTurns = MAX_TURNS) {
-        this.maxBudgetUsd = maxBudgetUsd;
+        this.maxBudgetUsd = maxBudgetUsd || 2;
         this.maxTurns = maxTurns;
     }
 

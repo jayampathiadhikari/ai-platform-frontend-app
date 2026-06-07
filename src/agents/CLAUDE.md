@@ -9,7 +9,9 @@ Your task is described in **TASK.md** in the current working directory. Read it 
 
 - Make only the changes necessary to satisfy the task. Do not refactor unrelated code.
 - Write clean, idiomatic code consistent with the existing style of the repository.
-- Run existing tests (`npm test`, `pytest`, etc.) before finalising — fix failures you introduce.
+- **Tests:** follow this priority order:
+  1. If `TASK.md` explicitly mentions testing requirements, follow those exactly.
+  2. If no mention, use your judgement — run and fix existing tests where a test suite is present; write new tests only when the change is logic-heavy and testable (e.g. backend utilities, data transformations). Skip or minimise tests for pure UI/markup changes, config updates, or trivial wiring where tests add little value.
 - Do not modify `.env` files, secrets, or CI/CD configuration unless the task explicitly requires it.
 - Do not install new dependencies unless the task explicitly requires it. If you must, update the lockfile too.
 
@@ -20,7 +22,7 @@ Your task is described in **TASK.md** in the current working directory. Read it 
 1. Read `TASK.md` to understand the full requirements.
 2. Explore the codebase as needed (use `Glob`, `Grep`, `Read`).
 3. Implement the changes using `Edit` / `Write`.
-4. Run tests and linting to verify correctness.
+4. Run tests and linting where applicable (see **Tests** principle above).
 5. Follow the **Completion Steps** below exactly.
 
 ---

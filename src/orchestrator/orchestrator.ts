@@ -6,10 +6,11 @@ import path from "path";
 import type { AgentDirective } from "./types.js";
 import { parseAgentDirective } from "./helpers.js";
 import { mockJiraTickets } from "../context-provider/mock-jira-tickets.js";
-import type { JiraStory } from "../workspace-manager/types.js";
+import type { JiraStory, Workspace } from "../workspace-manager/types.js";
 import { setupWorkspace } from "../workspace-manager/workspace-manager.js";
 import type { Agent, JobResult } from "../agents/types.js";
 import { DevAgent } from "../agents/dev-agent.js";
+import { createPullRequest } from "../git/github.js";
 
 const CLAUDE_MD_PATH = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
@@ -62,5 +63,37 @@ export async function runJob(
     const agent: Agent = new DevAgent();
     const result: JobResult = await agent.run(jiraStory, workspace);
 
+    await postProcess(jiraStory, workspace, result);
+
     console.log("[orchestrator] Job result: ", result);
+}
+
+/**
+ * Runs after the agent completes. Responsible for any side-effects that depend
+ * on the job outcome — currently opens a GitHub PR for non-failing verdicts.
+ */
+async function postProcess(
+    story: JiraStory,
+    workspace: Workspace,
+    result: JobResult
+): Promise<void> {
+    if (result.verdict === "PASS" || result.verdict === "PARTIAL") {
+        try {
+            const pr = await createPullRequest({
+                remoteUrl: workspace.remoteUrl,
+                head: workspace.branch,
+                base: story.baseBranch,
+                title: `[${story.id}] ${story.description}`,
+                body: `Automated implementation of Jira story ${story.id}.${
+                    result.reason ? `\n\n**Agent note:** ${result.reason}` : ""
+                }`,
+            });
+            result.prUrl = pr.url;
+            console.log(`[orchestrator] PR opened: ${pr.url}`);
+        } catch (err) {
+            console.error(`[orchestrator] Failed to open PR for ${workspace.jobId}:`, err);
+        }
+    } else {
+        console.warn(`[orchestrator] Skipping PR — verdict is FAIL for ${workspace.jobId}`);
+    }
 }

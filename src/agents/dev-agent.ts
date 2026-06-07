@@ -2,8 +2,6 @@ import { query, type Options } from "@anthropic-ai/claude-agent-sdk";
 import type { SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { Agent, JobResult, ReviewVerdict } from "./types.ts";
 import type { JiraStory, Workspace } from "../workspace-manager/types.js";
-import { createPullRequest } from "../git/github.js";
-
 
 const MAX_BUDGET_USD = Number(process.env.MAX_BUDGET_USD ?? "3.00");
 const MAX_TURNS = Number(process.env.MAX_TURNS ?? "60");
@@ -76,26 +74,9 @@ export class DevAgent implements Agent {
         // Parse the REVIEW.json verdict the agent is instructed to write
         const verdict = await this.parseVerdict(workspace.jobDir, messages);
 
-        // Open the PR via the GitHub API now that the agent has committed & pushed
-        let prUrl: string | undefined;
-        try {
-            const pr = await createPullRequest({
-                remoteUrl: workspace.remoteUrl,
-                head: workspace.branch,
-                base: story.baseBranch,
-                title: `[${story.id}] ${story.description}`,
-                body: `Automated implementation of Jira story ${story.id}.`,
-            });
-            prUrl = pr.url;
-            console.log(`[agent] PR opened: ${prUrl}`);
-        } catch (err) {
-            console.error(`[agent] Failed to open PR for ${workspace.jobId}:`, err);
-        }
-
         return {
             storyId: story.id,
             verdict: verdict.verdict,
-            ...(prUrl !== undefined && { prUrl }),
             ...(verdict.reason !== undefined && { reason: verdict.reason }),
             costUsd,
             turns,

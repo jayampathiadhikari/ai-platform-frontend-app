@@ -17,7 +17,7 @@ export class DevAgent implements Agent {
         this.maxTurns = maxTurns;
     }
 
-    async run(story: JiraStory, workspace: Workspace): Promise<JobResult> {
+    async run(story: JiraStory, workspace: Workspace, signal?: AbortSignal): Promise<JobResult> {
         console.log(`[agent] [${workspace.jobId}] Starting — story=${story.id} cwd=${workspace.jobDir}`);
         console.log(`[agent] [${workspace.jobId}] Limits — maxBudget=$${this.maxBudgetUsd} maxTurns=${this.maxTurns}`);
 
@@ -41,6 +41,9 @@ export class DevAgent implements Agent {
             hooks: {
                 PreToolUse: [bashGuardHook()],
             },
+
+            // Propagate cancellation signal from the job registry
+            ...(signal ? { abortSignal: signal } : {}),
         };
 
         let resultMessage: SDKResultMessage | undefined;

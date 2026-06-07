@@ -12,6 +12,7 @@ import { setupWorkspace } from "../workspace-manager/workspace-manager.js";
 import type { Agent, JobResult } from "../agents/types.js";
 import { DevAgent } from "../agents/dev-agent.js";
 import { createPullRequest } from "../git/github.js";
+import { registerJob, finishJob } from "../job-registry.js";
 
 const CLAUDE_MD_PATH = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
@@ -72,12 +73,29 @@ export async function runJob(
     const workspace = await setupWorkspace(jiraStory);
     console.log(`[orchestrator] [${jobId}] Workspace ready — dir=${workspace.jobDir} branch=${workspace.branch}`);
 
-    console.log(`[orchestrator] [${jobId}] Handing off to DevAgent...`);
-    const agent: Agent = new DevAgent();
-    const result: JobResult = await agent.run(jiraStory, workspace);
-    console.log(`[orchestrator] [${jobId}] Agent finished — verdict=${result.verdict} turns=${result.turns} cost=$${result.costUsd.toFixed(4)}`);
-    if (result.reason) {
-        console.log(`[orchestrator] [${jobId}] Agent reason: ${result.reason}`);
+    // Register this job so it can be cancelled via the API
+    const controller = registerJob(jobId, jiraId);
+    const { signal } = controller;
+
+    let result: JobResult;
+    try {
+        console.log(`[orchestrator] [${jobId}] Handing off to DevAgent...`);
+        const agent: Agent = new DevAgent();
+        result = await agent.run(jiraStory, workspace, signal);
+        console.log(`[orchestrator] [${jobId}] Agent finished — verdict=${result.verdict} turns=${result.turns} cost=$${result.costUsd.toFixed(4)}`);
+        if (result.reason) {
+            console.log(`[orchestrator] [${jobId}] Agent reason: ${result.reason}`);
+        }
+        finishJob(jobId, "done");
+    } catch (err) {
+        const wasCancelled = signal.aborted;
+        finishJob(jobId, wasCancelled ? "cancelled" : "failed");
+        if (wasCancelled) {
+            console.warn(`[orchestrator] [${jobId}] Job was cancelled — skipping post-processing`);
+        } else {
+            console.error(`[orchestrator] [${jobId}] Agent threw an error:`, err);
+        }
+        return;
     }
 
     console.log(`[orchestrator] [${jobId}] Running post-processing...`);

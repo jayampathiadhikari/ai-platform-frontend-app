@@ -16,5 +16,5 @@ export interface ReviewVerdict {
 }
 
 export interface Agent {
-    run(story: JiraStory, workspace: Workspace): Promise<JobResult>;
+    run(story: JiraStory, workspace: Workspace, signal?: AbortSignal): Promise<JobResult>;
 }

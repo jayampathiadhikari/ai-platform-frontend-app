@@ -59,16 +59,21 @@ export class DevAgent implements Agent {
                 for (const block of message.message.content) {
                     if (block.type === "text") {
                         messages.push(block.text);
+                        console.log(`[agent] [${workspace.jobId}] Text:\n${block.text}`);
                     }
                     if (block.type === "tool_use") {
-                        console.log(`[agent] [${workspace.jobId}] Tool call: ${block.name}`);
+                        console.log(`[agent] [${workspace.jobId}] Tool call: ${block.name} — input: ${JSON.stringify(block.input, null, 2)}`);
                     }
                 }
             }
 
             if (message.type === "result") {
                 resultMessage = message;
-
+                console.log(
+                    `[agent] [${workspace.jobId}]  Result — subtype=${message.subtype}` +
+                    ` turns=${message.num_turns} cost=$${message.total_cost_usd?.toFixed(4) ?? "?"}` +
+                    (message.stop_reason ? ` stop_reason=${message.stop_reason}` : "")
+                );
                 if (message.subtype === "error_max_turns") {
                     console.warn(`[agent] [${workspace.jobId}] Hit max turns (${this.maxTurns})`);
                 }

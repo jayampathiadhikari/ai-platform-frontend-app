@@ -133,7 +133,7 @@ base-branch: "feature/server-side-preferences"`,
                 id: "c4-1",
                 author: "agent-bot",
                 body: `@agent
-                repo-url: "https://github.com/jayampathiadhikari/ai-platform-frontend-app",
+                repo-url: "https://github.com/jayampathiadhikari/ai-frontend-test-agent",
                 base-branch: "master"`,
                 createdAt: "2026-06-06T09:00:00Z",
             },

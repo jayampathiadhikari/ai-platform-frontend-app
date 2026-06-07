@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import path from "path";
 import type { AgentDirective } from "./types.js";
 import { parseAgentDirective } from "./helpers.js";
-import { MockJiraContextProvider } from "../context-provider/context-provider.js";
+import { MockJiraContextProvider } from "../context-provider/index.js";
 import type { ContextProvider } from "../context-provider/types.js";
 import type { JiraStory, Workspace } from "../workspace-manager/types.js";
 import { setupWorkspace } from "../workspace-manager/workspace-manager.js";

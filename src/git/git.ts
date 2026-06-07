@@ -95,9 +95,32 @@ export async function gitConfig(
 export async function gitPush(
     branch: string,
     repoDir: string,
-    remote = "origin"
+    remote = "origin",
+    setUpstream = false
 ): Promise<GitResult> {
-    return git(["push", remote, branch], repoDir);
+    const args = ["push"];
+    if (setUpstream) args.push("-u");
+    args.push(remote, branch);
+    return git(args, repoDir);
+}
+
+/**
+ * Create a commit in the given repo.
+ * Use `allowEmpty: true` to create an initial commit on a brand-new branch
+ * with no files yet (needed when bootstrapping an empty remote repo).
+ *
+ * @param message   - Commit message.
+ * @param repoDir   - Absolute path to the local repository.
+ * @param options   - Optional flags.
+ */
+export async function gitCommit(
+    message: string,
+    repoDir: string,
+    options: { allowEmpty?: boolean } = {}
+): Promise<GitResult> {
+    const args = ["commit", "-m", message];
+    if (options.allowEmpty) args.push("--allow-empty");
+    return git(args, repoDir);
 }
 
 // ---------------------------------------------------------------------------

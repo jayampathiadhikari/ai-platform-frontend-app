@@ -1,3 +1,6 @@
 /node_modules
 /dist
 .env*
+
+# Local agent job workspaces — if JOBS_DIR is set to a path inside the project
+/agent-jobs/

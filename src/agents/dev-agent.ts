@@ -1,6 +1,6 @@
 import { query, type Options } from "@anthropic-ai/claude-agent-sdk";
 import type { SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
-import type { Agent, JobResult, ReviewVerdict } from "./types.ts";
+import type { Agent, JobResult, ReviewVerdict } from "./types.js";
 import type { JiraStory, Workspace } from "../workspace-manager/types.js";
 import { bashGuardHook } from "./bash-guard.js";
 

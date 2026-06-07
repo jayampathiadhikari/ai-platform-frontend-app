@@ -1,5 +1,8 @@
 
 
+import fs from "fs/promises";
+import { fileURLToPath } from "url";
+import path from "path";
 import type { AgentDirective } from "./types.js";
 import { parseAgentDirective } from "./helpers.js";
 import { mockJiraTickets } from "../context-provider/mock-jira-tickets.js";
@@ -7,6 +10,11 @@ import type { JiraStory } from "../workspace-manager/types.js";
 import { setupWorkspace } from "../workspace-manager/workspace-manager.js";
 import type { Agent, JobResult } from "../agents/types.js";
 import { DevAgent } from "../agents/dev-agent.js";
+
+const CLAUDE_MD_PATH = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../agents/CLAUDE.md"
+);
 
 
 /**
@@ -25,7 +33,10 @@ export async function runJob(
         throw new Error(`Jira ticket "${jiraId}" not found.`);
     }
 
-    // 2. Parse @agent directive
+    // 2. Load agent operational guidelines
+    const claudeMd = await fs.readFile(CLAUDE_MD_PATH, "utf8");
+
+    // 3. Parse @agent directive
     const directive: AgentDirective | null = parseAgentDirective(ticket);
     if (!directive) {
         throw new Error(
@@ -40,7 +51,7 @@ export async function runJob(
         repoUrl: directive.repoUrl,
         baseBranch: directive.baseBranch,
         taskMd: ticket.description,
-        claudeMd: "",
+        claudeMd,
         description: ticket.description,
         retryCount: 0,
         checkpointRef: "",

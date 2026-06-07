@@ -18,7 +18,8 @@ export class DevAgent implements Agent {
     }
 
     async run(story: JiraStory, workspace: Workspace): Promise<JobResult> {
-        console.log(`[agent] Starting job ${workspace.jobId}`);
+        console.log(`[agent] [${workspace.jobId}] Starting — story=${story.id} cwd=${workspace.jobDir}`);
+        console.log(`[agent] [${workspace.jobId}] Limits — maxBudget=$${this.maxBudgetUsd} maxTurns=${this.maxTurns}`);
 
         const options: Options = {
             // Working directory locked to this job's isolated worktree
@@ -44,16 +45,23 @@ export class DevAgent implements Agent {
 
         let resultMessage: SDKResultMessage | undefined;
         const messages: string[] = [];
+        let turnCount = 0;
+
+        console.log(`[agent] [${workspace.jobId}] Sending prompt to Claude...`);
 
         for await (const message of query({
             prompt: this.buildPrompt(story),
             options,
         })) {
             if (message.type === "assistant") {
-                // Collect text output for verdict parsing
+                turnCount++;
+                console.log(`[agent] [${workspace.jobId}] Turn ${turnCount} — assistant message received`);
                 for (const block of message.message.content) {
                     if (block.type === "text") {
                         messages.push(block.text);
+                    }
+                    if (block.type === "tool_use") {
+                        console.log(`[agent] [${workspace.jobId}] Tool call: ${block.name}`);
                     }
                 }
             }
@@ -62,10 +70,10 @@ export class DevAgent implements Agent {
                 resultMessage = message;
 
                 if (message.subtype === "error_max_turns") {
-                    console.warn(`[agent] Hit max turns for ${workspace.jobId}`);
+                    console.warn(`[agent] [${workspace.jobId}] Hit max turns (${this.maxTurns})`);
                 }
                 if (message.subtype === "error_max_budget_usd") {
-                    console.warn(`[agent] Budget exceeded for ${workspace.jobId}`);
+                    console.warn(`[agent] [${workspace.jobId}] Budget cap reached ($${this.maxBudgetUsd})`);
                 }
             }
         }
@@ -77,8 +85,9 @@ export class DevAgent implements Agent {
             `[agent] Job ${workspace.jobId} complete. Turns: ${turns}, Cost: $${costUsd.toFixed(4)}`
         );
 
-        // Parse the REVIEW.json verdict the agent is instructed to write
+        console.log(`[agent] [${workspace.jobId}] Parsing verdict from REVIEW.json...`);
         const verdict = await this.parseVerdict(workspace.jobDir, messages);
+        console.log(`[agent] [${workspace.jobId}] Verdict: ${verdict.verdict}${verdict.reason ? ` — ${verdict.reason}` : ""}`);
 
         return {
             storyId: story.id,
@@ -100,15 +109,18 @@ export class DevAgent implements Agent {
         const fs = await import("fs/promises");
         const path = await import("path");
 
+        const reviewPath = path.join(jobDir, "REVIEW.json");
         try {
-            const raw = await fs.readFile(path.join(jobDir, "REVIEW.json"), "utf8");
+            const raw = await fs.readFile(reviewPath, "utf8");
             const json = JSON.parse(raw) as ReviewVerdict;
+            console.log(`[agent] REVIEW.json read successfully from ${reviewPath}`);
             return json;
         } catch {
-            // REVIEW.json not written — infer from message content
+            console.warn(`[agent] REVIEW.json not found at ${reviewPath} — inferring verdict from message text`);
             const combined = messages.join("\n").toLowerCase();
             if (combined.includes("pass")) return { verdict: "PASS", reason: "inferred from output" };
             if (combined.includes("partial")) return { verdict: "PARTIAL", reason: "inferred from output" };
+            console.error(`[agent] Could not infer verdict — defaulting to FAIL`);
             return { verdict: "FAIL", reason: "REVIEW.json not found" };
         }
     }

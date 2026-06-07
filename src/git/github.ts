@@ -27,6 +27,7 @@ export async function createPullRequest(
     }
 
     const { owner, repo } = parseOwnerRepo(opts.remoteUrl);
+    console.log(`[github] Creating PR — ${owner}/${repo} head=${opts.head} base=${opts.base}`);
 
     const response = await fetch(
         `https://api.github.com/repos/${owner}/${repo}/pulls`,
@@ -49,12 +50,14 @@ export async function createPullRequest(
 
     if (!response.ok) {
         const text = await response.text();
+        console.error(`[github] PR creation failed — status=${response.status} body=${text}`);
         throw new Error(
             `GitHub API error ${response.status} creating PR: ${text}`
         );
     }
 
     const data = (await response.json()) as { html_url: string; number: number };
+    console.log(`[github] PR created — #${data.number} ${data.html_url}`);
     return { url: data.html_url, number: data.number };
 }
 

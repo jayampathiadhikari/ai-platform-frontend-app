@@ -23,32 +23,30 @@ export async function setupWorkspace(story: JiraStory): Promise<Workspace> {
     const branch = `${GIT_BRANCH_PREFIX}${story.id}`;
     const remoteUrl = buildRemoteUrl(story.repoUrl);
 
+    console.log(`[workspace] [${jobId}] Ensuring jobs dir exists: ${JOBS_DIR}`);
     await fs.mkdir(JOBS_DIR, { recursive: true });
 
-    // Shallow clone of baseBranch only — fast and lean
-    console.log(`[workspace] Cloning ${story.repoUrl}@${story.baseBranch} → ${jobDir}`);
-
-    // cloning into target directory
+    console.log(`[workspace] [${jobId}] Cloning ${story.repoUrl}@${story.baseBranch} → ${jobDir} (depth=1)`);
     await gitClone(remoteUrl, {
         branch: story.baseBranch,
         depth: 1,
         singleBranch: true,
         targetDir: jobDir,
     });
+    console.log(`[workspace] [${jobId}] Clone complete`);
 
-    // Configure git identity inside the clone — required for commits
+    console.log(`[workspace] [${jobId}] Configuring git identity`);
     await gitConfig("user.email", "agent@yourplatform.io", jobDir);
     await gitConfig("user.name", "Agent Bot", jobDir);
 
-    // Create and switch to the agent working branch
+    console.log(`[workspace] [${jobId}] Creating and checking out branch: ${branch}`);
     await gitCreateAndCheckout(branch, jobDir);
 
-    // Write job-specific context files
+    console.log(`[workspace] [${jobId}] Writing TASK.md (${story.taskMd.length} bytes) and CLAUDE.md (${story.claudeMd.length} bytes)`);
     await fs.writeFile(path.join(jobDir, "TASK.md"), story.taskMd, "utf8");
     await fs.writeFile(path.join(jobDir, "CLAUDE.md"), story.claudeMd, "utf8");
 
-    console.log(`[workspace] Ready: ${jobId} on branch ${branch}`);
-
+    console.log(`[workspace] [${jobId}] Ready on branch ${branch}`);
     return { jobId, jobDir, branch, repo: story.repoUrl, remoteUrl };
 }
 
@@ -62,13 +60,12 @@ export async function setupWorkspace(story: JiraStory): Promise<Workspace> {
  *  - A failed push doesn't leave the agent confused mid-task
  */
 export async function pushAndTeardown(workspace: Workspace): Promise<void> {
+    console.log(`[workspace] [${workspace.jobId}] Pushing branch ${workspace.branch}...`);
     try {
-        // Push the branch — GitHub PR can then be opened via API or by the agent's final step
         await gitPush(workspace.branch, workspace.jobDir);
-        console.log(`[workspace] Pushed branch ${workspace.branch}`);
+        console.log(`[workspace] [${workspace.jobId}] Push successful`);
     } catch (err) {
-        // Log but don't rethrow — teardown must still clean up the directory
-        console.error(`[workspace] Push failed for ${workspace.jobId}:`, err);
+        console.error(`[workspace] [${workspace.jobId}] Push failed — proceeding with teardown:`, err);
     }
 
     await removeClone(workspace.jobDir, workspace.jobId);
@@ -79,6 +76,7 @@ export async function pushAndTeardown(workspace: Workspace): Promise<void> {
  * a broken branch to GitHub.
  */
 export async function teardownWorkspace(workspace: Workspace): Promise<void> {
+    console.log(`[workspace] [${workspace.jobId}] Tearing down workspace (no push)`);
     await removeClone(workspace.jobDir, workspace.jobId);
 }
 

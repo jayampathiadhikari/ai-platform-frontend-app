@@ -30,22 +30,30 @@ export async function runJob(
     jobId: string,
     contextProvider: ContextProvider = new MockJiraContextProvider()
 ): Promise<void> {
+    console.log(`[orchestrator] [${jobId}] Starting job for jiraId=${jiraId}`);
+
     // 1. Resolve ticket
     const ticket = await contextProvider.getTicket(jiraId);
     if (!ticket) {
+        console.error(`[orchestrator] [${jobId}] Ticket not found: ${jiraId}`);
         throw new Error(`Jira ticket "${jiraId}" not found.`);
     }
+    console.log(`[orchestrator] [${jobId}] Resolved ticket: ${ticket.id} — "${ticket.title}" (${ticket.status}, ${ticket.priority})`);
 
     // 2. Load agent operational guidelines
+    console.log(`[orchestrator] [${jobId}] Loading CLAUDE.md from ${CLAUDE_MD_PATH}`);
     const claudeMd = await fs.readFile(CLAUDE_MD_PATH, "utf8");
+    console.log(`[orchestrator] [${jobId}] CLAUDE.md loaded (${claudeMd.length} bytes)`);
 
     // 3. Parse @agent directive
     const directive: AgentDirective | null = parseAgentDirective(ticket);
     if (!directive) {
+        console.error(`[orchestrator] [${jobId}] No @agent directive found in ticket comments for ${jiraId}`);
         throw new Error(
             `No valid @agent directive found in comments for ticket "${jiraId}".`
         );
     }
+    console.log(`[orchestrator] [${jobId}] @agent directive parsed — repo=${directive.repoUrl} base=${directive.baseBranch}`);
 
     const jiraStory: JiraStory = {
         id: ticket.id,
@@ -60,14 +68,22 @@ export async function runJob(
         checkpointRef: "",
     };
 
+    console.log(`[orchestrator] [${jobId}] Setting up workspace...`);
     const workspace = await setupWorkspace(jiraStory);
+    console.log(`[orchestrator] [${jobId}] Workspace ready — dir=${workspace.jobDir} branch=${workspace.branch}`);
 
+    console.log(`[orchestrator] [${jobId}] Handing off to DevAgent...`);
     const agent: Agent = new DevAgent();
     const result: JobResult = await agent.run(jiraStory, workspace);
+    console.log(`[orchestrator] [${jobId}] Agent finished — verdict=${result.verdict} turns=${result.turns} cost=$${result.costUsd.toFixed(4)}`);
+    if (result.reason) {
+        console.log(`[orchestrator] [${jobId}] Agent reason: ${result.reason}`);
+    }
 
+    console.log(`[orchestrator] [${jobId}] Running post-processing...`);
     await postProcess(jiraStory, workspace, result);
 
-    console.log("[orchestrator] Job result: ", result);
+    console.log(`[orchestrator] [${jobId}] Job complete:`, result);
 }
 
 /**
@@ -80,6 +96,7 @@ async function postProcess(
     result: JobResult
 ): Promise<void> {
     if (result.verdict === "PASS" || result.verdict === "PARTIAL") {
+        console.log(`[orchestrator] [${workspace.jobId}] Opening PR — head=${workspace.branch} base=${story.baseBranch}`);
         try {
             const pr = await createPullRequest({
                 remoteUrl: workspace.remoteUrl,
@@ -91,11 +108,11 @@ async function postProcess(
                 }`,
             });
             result.prUrl = pr.url;
-            console.log(`[orchestrator] PR opened: ${pr.url}`);
+            console.log(`[orchestrator] [${workspace.jobId}] PR #${pr.number} opened: ${pr.url}`);
         } catch (err) {
-            console.error(`[orchestrator] Failed to open PR for ${workspace.jobId}:`, err);
+            console.error(`[orchestrator] [${workspace.jobId}] Failed to open PR:`, err);
         }
     } else {
-        console.warn(`[orchestrator] Skipping PR — verdict is FAIL for ${workspace.jobId}`);
+        console.warn(`[orchestrator] [${workspace.jobId}] Skipping PR — verdict is FAIL`);
     }
 }

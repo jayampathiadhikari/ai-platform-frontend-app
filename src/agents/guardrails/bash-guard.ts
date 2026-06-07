@@ -1,5 +1,5 @@
 import type { HookCallbackMatcher, PreToolUseHookInput, SyncHookJSONOutput } from "@anthropic-ai/claude-agent-sdk";
-import { GIT_BRANCH_PREFIX } from "../constants.js";
+import { GIT_BRANCH_PREFIX } from "../../constants.js";
 
 
 /**
@@ -71,31 +71,31 @@ export function bashGuardHook(): HookCallbackMatcher {
  */
 const BLOCKED_PATTERNS: { pattern: RegExp; reason: string }[] = [
     // Remote code execution via piping a download straight into a shell
-    { pattern: /curl\s+.*\|\s*(ba)?sh/i,          reason: "Remote code execution via curl pipe is not allowed" },
-    { pattern: /wget\s+.*\|\s*(ba)?sh/i,           reason: "Remote code execution via wget pipe is not allowed" },
+    { pattern: /curl\s+.*\|\s*(ba)?sh/i, reason: "Remote code execution via curl pipe is not allowed" },
+    { pattern: /wget\s+.*\|\s*(ba)?sh/i, reason: "Remote code execution via wget pipe is not allowed" },
 
     // Recursive deletes of absolute paths or home-relative paths
     { pattern: /rm\s+(-\w*r\w*f|-\w*f\w*r)\s+\//i, reason: "Recursive delete of absolute paths is not allowed" },
-    { pattern: /rm\s+(-\w*r\w*f|-\w*f\w*r)\s+~/i,  reason: "Recursive delete of home-relative paths is not allowed" },
+    { pattern: /rm\s+(-\w*r\w*f|-\w*f\w*r)\s+~/i, reason: "Recursive delete of home-relative paths is not allowed" },
 
     // Privilege escalation
-    { pattern: /\bsudo\b/i,                        reason: "sudo is not allowed" },
-    { pattern: /\bsu\s+-/i,                        reason: "User switching is not allowed" },
+    { pattern: /\bsudo\b/i, reason: "sudo is not allowed" },
+    { pattern: /\bsu\s+-/i, reason: "User switching is not allowed" },
 
     // Credential / secret stores
-    { pattern: /~\/\.ssh\b/i,                      reason: "Access to ~/.ssh is not allowed" },
-    { pattern: /~\/\.aws\b/i,                      reason: "Access to ~/.aws credentials is not allowed" },
-    { pattern: /~\/\.gnupg\b/i,                    reason: "Access to ~/.gnupg is not allowed" },
-    { pattern: /\/etc\/passwd/i,                   reason: "Access to /etc/passwd is not allowed" },
-    { pattern: /\/etc\/shadow/i,                   reason: "Access to /etc/shadow is not allowed" },
+    { pattern: /~\/\.ssh\b/i, reason: "Access to ~/.ssh is not allowed" },
+    { pattern: /~\/\.aws\b/i, reason: "Access to ~/.aws credentials is not allowed" },
+    { pattern: /~\/\.gnupg\b/i, reason: "Access to ~/.gnupg is not allowed" },
+    { pattern: /\/etc\/passwd/i, reason: "Access to /etc/passwd is not allowed" },
+    { pattern: /\/etc\/shadow/i, reason: "Access to /etc/shadow is not allowed" },
 
     // Container / cluster management
-    { pattern: /\bdocker\b.*(run|exec|build)/i,    reason: "Docker run/exec/build is not allowed" },
-    { pattern: /\bkubectl\b/i,                     reason: "kubectl is not allowed" },
+    { pattern: /\bdocker\b.*(run|exec|build)/i, reason: "Docker run/exec/build is not allowed" },
+    { pattern: /\bkubectl\b/i, reason: "kubectl is not allowed" },
 
     // Forced git operations that bypass review
-    { pattern: /git\s+push\s+.*--force/i,          reason: "Force-push is not allowed; the platform manages pushes" },
-    { pattern: /git\s+push\s+.*-f\b/i,             reason: "Force-push is not allowed; the platform manages pushes" },
+    { pattern: /git\s+push\s+.*--force/i, reason: "Force-push is not allowed; the platform manages pushes" },
+    { pattern: /git\s+push\s+.*-f\b/i, reason: "Force-push is not allowed; the platform manages pushes" },
 
     // System-wide package manager installs
     { pattern: /\b(apt|apt-get|yum|dnf|brew)\s+install\b/i, reason: "System-level package installs are not allowed" },

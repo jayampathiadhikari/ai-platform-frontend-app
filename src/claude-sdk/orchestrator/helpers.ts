@@ -2,7 +2,7 @@ import type { AgentDirective } from "./types.js";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
-import type { JiraTicket } from "../context-provider/types.js";
+import type { JiraTicket } from "../../shared/context-provider/types.js";
 
 /**
  * Parses the first @agent comment block found in a ticket's comments.

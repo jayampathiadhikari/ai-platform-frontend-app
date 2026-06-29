@@ -1,7 +1,7 @@
 import { query, type Options } from "@anthropic-ai/claude-agent-sdk";
 import type { SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { Agent, JobResult, ReviewVerdict } from "./types.js";
-import type { JiraStory, Workspace } from "../workspace-manager/types.js";
+import type { JiraStory, Workspace } from "../../shared/workspace-manager/types.js";
 import { bashGuardHook } from "./guardrails/bash-guard.js";
 
 const MAX_BUDGET_USD = Number(process.env.MAX_BUDGET_USD ?? "3.00");

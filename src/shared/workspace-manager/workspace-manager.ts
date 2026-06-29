@@ -10,7 +10,7 @@ import {
     removeClone,
     GIT_BRANCH_PREFIX,
 } from "./helpers.js";
-import { gitClone, gitConfig, gitCreateAndCheckout, gitPush } from "../../shared/git/git.js";
+import { gitClone, gitConfig, gitCreateAndCheckout, gitPush } from "../git/git.js";
 
 const JOBS_DIR = process.env.JOBS_DIR ?? "/workspace/jobs";
 

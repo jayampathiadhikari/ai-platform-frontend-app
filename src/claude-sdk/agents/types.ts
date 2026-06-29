@@ -1,4 +1,4 @@
-import type { JiraStory, Workspace } from "../workspace-manager/types.js";
+import type { JiraStory, Workspace } from "../../shared/workspace-manager/types.js";
 
 export interface JobResult {
   storyId: string;
@@ -16,5 +16,5 @@ export interface ReviewVerdict {
 }
 
 export interface Agent {
-    run(story: JiraStory, workspace: Workspace, signal?: AbortSignal): Promise<JobResult>;
+  run(story: JiraStory, workspace: Workspace, signal?: AbortSignal): Promise<JobResult>;
 }

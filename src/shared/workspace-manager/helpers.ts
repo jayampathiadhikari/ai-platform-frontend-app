@@ -1,6 +1,6 @@
 import fs from "fs/promises";
-import { GIT_BRANCH_PREFIX } from "../../shared/constants.js";
-import { gitClone, gitConfig, gitCreateAndCheckout, gitCommit, gitPush } from "../../shared/git/git.js";
+import { GIT_BRANCH_PREFIX } from "../constants.js";
+import { gitClone, gitConfig, gitCreateAndCheckout, gitCommit, gitPush } from "../git/git.js";
 
 // ---------------------------------------------------------------------------
 // Remote URL

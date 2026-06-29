@@ -5,14 +5,14 @@ import { fileURLToPath } from "url";
 import path from "path";
 import type { AgentDirective } from "./types.js";
 import { parseAgentDirective } from "./helpers.js";
-import type { JiraStory, Workspace } from "../workspace-manager/types.js";
-import { setupWorkspace } from "../workspace-manager/workspace-manager.js";
+import type { JiraStory, Workspace } from "../../shared/workspace-manager/types.js";
+import { setupWorkspace } from "../../shared/workspace-manager/workspace-manager.js";
 import type { Agent, JobResult } from "../agents/types.js";
 import { DevAgent } from "../agents/dev-agent.js";
 import { createPullRequest } from "../../shared/git/github.js";
 import { registerJob, finishJob } from "../../shared/job-registry.js";
-import { MockJiraContextProvider } from "../context-provider/index.js";
-import type { ContextProvider } from "../context-provider/types.js";
+import { MockJiraContextProvider } from "../../shared/context-provider/index.js";
+import type { ContextProvider } from "../../shared/context-provider/types.js";
 
 
 const CLAUDE_MD_PATH = path.resolve(

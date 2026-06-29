@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { createHash } from "crypto";
 import type { JiraStory, Workspace } from "./types.js";
-import { gitClone, gitConfig, gitCreateAndCheckout, gitPush } from "../git/git.js";
+
 import {
     buildRemoteUrl,
     isEmptyRepoError,
@@ -10,6 +10,7 @@ import {
     removeClone,
     GIT_BRANCH_PREFIX,
 } from "./helpers.js";
+import { gitClone, gitConfig, gitCreateAndCheckout, gitPush } from "../../shared/git/git.js";
 
 const JOBS_DIR = process.env.JOBS_DIR ?? "/workspace/jobs";
 

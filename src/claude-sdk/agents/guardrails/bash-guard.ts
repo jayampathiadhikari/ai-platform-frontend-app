@@ -1,5 +1,5 @@
 import type { HookCallbackMatcher, PreToolUseHookInput, SyncHookJSONOutput } from "@anthropic-ai/claude-agent-sdk";
-import { GIT_BRANCH_PREFIX } from "../../constants.js";
+import { GIT_BRANCH_PREFIX } from "../../../shared/constants.js";
 
 
 /**

@@ -2,8 +2,8 @@ import "dotenv/config";
 import express from "express";
 import type { Request, Response } from "express";
 import { randomUUID } from "crypto";
-import { runJob } from "./orchestrator/orchestrator.js";
-import { cancelJob, cancelAllJobs, getJob, listJobs } from "./job-registry.js";
+import { cancelJob, cancelAllJobs, getJob, listJobs } from "./shared/job-registry.js";
+import { runJob } from "./claude-sdk/orchestrator/orchestrator.js";
 
 const app = express();
 const PORT = process.env.PORT ?? 3000;
@@ -103,5 +103,5 @@ function shutdown(signal: string) {
   }, 1500).unref(); // .unref() so the timer doesn't keep the process alive by itself
 }
 
-process.on("SIGINT",  () => shutdown("SIGINT"));
+process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));

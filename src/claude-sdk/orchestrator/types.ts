@@ -1,4 +1,4 @@
-import type { JiraTicket } from "../claude-sdk/context-provider/types.js";
+import type { JiraTicket } from "../context-provider/types.js";
 
 export interface AgentDirective {
     repoUrl: string;

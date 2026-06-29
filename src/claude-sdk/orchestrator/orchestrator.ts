@@ -5,8 +5,8 @@ import { fileURLToPath } from "url";
 import path from "path";
 import type { AgentDirective } from "./types.js";
 import { parseAgentDirective } from "./helpers.js";
-import { MockJiraContextProvider } from "../context-provider/index.js";
-import type { ContextProvider } from "../context-provider/types.js";
+import { MockJiraContextProvider } from "../claude-sdk/context-provider/index.js";
+import type { ContextProvider } from "../claude-sdk/context-provider/types.js";
 import type { JiraStory, Workspace } from "../workspace-manager/types.js";
 import { setupWorkspace } from "../workspace-manager/workspace-manager.js";
 import type { Agent, JobResult } from "../agents/types.js";
@@ -121,9 +121,8 @@ async function postProcess(
                 head: workspace.branch,
                 base: story.baseBranch,
                 title: `[${story.id}] ${story.description}`,
-                body: `Automated implementation of Jira story ${story.id}.${
-                    result.reason ? `\n\n**Agent note:** ${result.reason}` : ""
-                }`,
+                body: `Automated implementation of Jira story ${story.id}.${result.reason ? `\n\n**Agent note:** ${result.reason}` : ""
+                    }`,
             });
             result.prUrl = pr.url;
             console.log(`[orchestrator] [${workspace.jobId}] PR #${pr.number} opened: ${pr.url}`);

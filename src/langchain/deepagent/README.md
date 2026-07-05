@@ -86,9 +86,10 @@ const agent = createDeepAgent({
     model:        llm,               // ChatAnthropic instance
     systemPrompt: SYSTEM_PROMPT,     // Software engineer persona
     tools:        [bashTool],        // Workspace-scoped bash (git, npm, tests)
+    backend:      new FilesystemBackend({ rootDir: jobDir, virtualMode: true }),
+    // Restrict filesystem write access to the job workspace only
     permissions: [
-        { operations: ["read", "write"], paths: [`${jobDir}/**`], mode: "allow" },
-        { operations: ["write"],         paths: ["/**"],           mode: "deny"  },
+        { operations: ["read", "write"], paths: ["/**"], mode: "allow" },
     ],
 });
 ```

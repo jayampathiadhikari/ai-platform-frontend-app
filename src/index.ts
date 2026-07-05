@@ -4,6 +4,7 @@ import type { Request, Response } from "express";
 import { randomUUID } from "crypto";
 import { cancelJob, cancelAllJobs, getJob, listJobs } from "./shared/job-registry.js";
 import { runJob } from "./claude-sdk/orchestrator/orchestrator.js";
+import { runJob as runLangChainJob } from "./langchain/langchain/orchestrator/graph.js";
 
 const app = express();
 const PORT = process.env.PORT ?? 3000;
@@ -30,6 +31,28 @@ app.post("/run", async (req: Request, res: Response) => {
   });
 
   res.json({ ok: true, jobId });
+});
+
+// ---------------------------------------------------------------------------
+// POST /run/langchain  — start a new job using the LangChain/LangGraph agent
+// ---------------------------------------------------------------------------
+app.post("/run/langchain", async (req: Request, res: Response) => {
+  const { jiraId } = req.body as { jiraId?: string };
+
+  if (!jiraId || typeof jiraId !== "string" || !jiraId.trim()) {
+    res.status(400).json({ ok: false, error: "jiraId is required" });
+    return;
+  }
+
+  const jobId = randomUUID();
+  console.log(`[POST /run/langchain] jiraId=${jiraId} jobId=${jobId}`);
+
+  // Run async — respond immediately so the HTTP client isn't left hanging
+  runLangChainJob(jiraId.trim(), jobId).catch((err) => {
+    console.error(`[POST /run/langchain] job ${jobId} failed:`, err);
+  });
+
+  res.json({ ok: true, jobId, agent: "langchain" });
 });
 
 // ---------------------------------------------------------------------------

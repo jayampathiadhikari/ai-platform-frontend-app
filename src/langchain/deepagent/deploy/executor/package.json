@@ -2,11 +2,10 @@
   "name": "executor-sidecar",
   "version": "1.0.0",
   "description": "Isolated bash executor sidecar for DeepDevAgent",
-  "main": "server.js",
-  "type": "module",
+  "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
-    "start": "node server.js",
+    "start": "node dist/server.js",
     "dev":   "tsx server.ts"
   },
   "devDependencies": {

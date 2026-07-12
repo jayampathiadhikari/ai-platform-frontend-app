@@ -1,9 +1,10 @@
 {
   "compilerOptions": {
     "target":           "es2022",
-    "module":           "nodenext",
-    "moduleResolution": "nodenext",
-    "outDir":           ".",
+    "module":           "commonjs",
+    "moduleResolution": "node",
+    "rootDir":          ".",
+    "outDir":           "./dist",
     "strict":           true,
     "esModuleInterop":  true,
     "skipLibCheck":     true

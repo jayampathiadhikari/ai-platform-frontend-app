@@ -44,7 +44,7 @@ services:
       PORT:            "3000"
       # ── Agent limits ────────────────────────────────────────────────────────
       MAX_TURNS:       "60"
-      ANTHROPIC_MODEL: "claude-haiku-4-5"
+      ANTHROPIC_MODEL: "claude-sonnet-4-6"
       # ── Workspace ───────────────────────────────────────────────────────────
       JOBS_DIR:        "/workspace/jobs"
       # ── Executor sidecar endpoint ────────────────────────────────────────────

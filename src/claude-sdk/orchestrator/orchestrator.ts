@@ -13,12 +13,10 @@ import { createPullRequest } from "../../shared/git/github.js";
 import { registerJob, finishJob } from "../../shared/job-registry.js";
 import { MockJiraContextProvider } from "../../shared/context-provider/index.js";
 import type { ContextProvider } from "../../shared/context-provider/types.js";
+import { getResourcePath } from "../../shared/resources.js";
 
 
-const CLAUDE_MD_PATH = path.resolve(
-    path.dirname(fileURLToPath(import.meta.url)),
-    "../agents/CLAUDE.md"
-);
+const CLAUDE_MD_PATH = getResourcePath("CLAUDE.md");
 
 
 /**

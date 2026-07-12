@@ -10,8 +10,8 @@
 #   - Only tools a dev agent legitimately needs: git, node, npm, python3
 #   - Listens only on 127.0.0.1 (localhost) — not externally reachable
 #
-# Build: docker build -t deepagent-executor -f deploy/executor/Dockerfile .
-#        (run from repo root so COPY has access to deploy/executor/)
+# Build: docker build -t deepagent-executor -f src/langchain/deepagent/deploy/executor/Dockerfile .
+#        (run from repo root so COPY has access to src/langchain/deepagent/deploy/executor/)
 # =============================================================================
 
 FROM node:22-alpine
@@ -32,9 +32,9 @@ RUN apk add --no-cache \
 WORKDIR /app
 
 # Copy executor source
-COPY deploy/executor/package.json ./
-COPY deploy/executor/tsconfig.json ./
-COPY deploy/executor/server.ts ./
+COPY src/langchain/deepagent/deploy/executor/package.json ./
+COPY src/langchain/deepagent/deploy/executor/tsconfig.json ./
+COPY src/langchain/deepagent/deploy/executor/server.ts ./
 
 # Install dev deps (only typescript + tsx — no prod deps)
 RUN npm install
@@ -51,4 +51,4 @@ USER node
 # Only expose to localhost — the agent talks to us over 127.0.0.1:8080
 EXPOSE 8080
 
-CMD ["node", "server.js"]
+CMD ["node", "dist/server.js"]

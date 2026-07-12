@@ -31,15 +31,13 @@ import { createPullRequest }       from "../../../shared/git/github.js";
 import { finishJob }               from "../../../shared/job-registry.js";
 import { parseAgentDirective }     from "../../../claude-sdk/orchestrator/helpers.js";
 import { LangChainDevAgent }       from "../agents/dev-agent.js";
+import { getResourcePath }         from "../../../shared/resources.js";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const CLAUDE_MD_PATH = path.resolve(
-    path.dirname(fileURLToPath(import.meta.url)),
-    "../../../claude-sdk/agents/CLAUDE.md"
-);
+const CLAUDE_MD_PATH = getResourcePath("CLAUDE.md");
 
 const MAX_RETRIES = Number(process.env.MAX_RETRIES ?? "2");
 

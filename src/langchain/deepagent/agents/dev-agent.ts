@@ -161,11 +161,14 @@ export class DeepDevAgent implements Agent {
         });
 
         // ── Build initial messages ───────────────────────────────────────────
+        // NOTE: We deliberately do NOT expose the real host path (jobDir) here.
+        // The agent operates entirely within the virtual filesystem rooted at "/",
+        // so it should only ever reference virtual paths like /TASK.md, /src/, etc.
         const userPrompt = `\
 You are implementing Jira story ${story.id}.
 
-The full task specification is in TASK.md and your operational guidelines are in CLAUDE.md.
-Both files are in your current working directory (${jobDir}).
+The full task specification is in /TASK.md and your operational guidelines are in /CLAUDE.md.
+Both files are at the root of your virtual workspace ("/").
 
 Begin by using write_todos to plan your work, then implement the story step by step.`;
 

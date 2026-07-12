@@ -23,8 +23,7 @@ const JOBS_DIR = process.env.JOBS_DIR ?? "/workspace/jobs";
  *   <JOBS_DIR>/
  *     job-<storyId>-<ts>/   ← repo root, single job, deleted on teardown
  */
-export async function setupWorkspace(story: JiraStory): Promise<Workspace> {
-    const jobId = `job-${story.id}-${Date.now()}`;
+export async function setupWorkspace(story: JiraStory, jobId: string): Promise<Workspace> {
     const jobDir = path.join(JOBS_DIR, jobId);
     const branch = `${GIT_BRANCH_PREFIX}${jobId}`;
     const remoteUrl = buildRemoteUrl(story.repoUrl);

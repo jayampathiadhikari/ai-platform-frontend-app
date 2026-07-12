@@ -53,7 +53,7 @@ app.post("/run", async (req: Request, res: Response) => {
     return;
   }
 
-  const jobId = randomUUID();
+  const jobId = `job-${jiraId.trim()}-${Date.now()}`;
   console.log(`[POST /run] jiraId=${jiraId} jobId=${jobId}`);
 
   // Run async — respond immediately so the HTTP client isn't left hanging
@@ -75,7 +75,7 @@ app.post("/run/langchain", async (req: Request, res: Response) => {
     return;
   }
 
-  const jobId = randomUUID();
+  const jobId = `job-${jiraId.trim()}-${Date.now()}`;
   console.log(`[POST /run/langchain] jiraId=${jiraId} jobId=${jobId}`);
 
   // Run async — respond immediately so the HTTP client isn't left hanging
@@ -97,7 +97,7 @@ app.post("/run/deepagent", async (req: Request, res: Response) => {
     return;
   }
 
-  const jobId = randomUUID();
+  const jobId = `job-${jiraId.trim()}-${Date.now()}`;
   console.log(`[POST /run/deepagent] jiraId=${jiraId} jobId=${jobId}`);
 
   // Run async — respond immediately so the HTTP client isn't left hanging

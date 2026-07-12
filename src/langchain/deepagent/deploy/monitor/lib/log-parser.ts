@@ -3,7 +3,7 @@ import type { ParsedLogEntry, LogSource, ComponentTag, LogLevel, BashActionType,
 // ─── Regex patterns ───────────────────────────────────────────────────────────
 
 // Matches: [component] [jobId] message   OR   [component] message
-const COMPONENT_RE = /^\[([^\]]+)\](?:\s+\[([a-f0-9-]{36})\])?\s+(.*)/s;
+const COMPONENT_RE = /^\[([^\]]+)\](?:\s+\[([a-zA-Z0-9-]+)\])?\s+(.*)/s;
 
 // Matches deepagent bash lines: [deepagent:bash] [ACTION] → command  OR  ← output
 const BASH_ACTION_RE = /^\[([A-Z:\/]+)\]\s+(→|←)\s+(.*)/s;
@@ -12,7 +12,7 @@ const BASH_ACTION_RE = /^\[([A-Z:\/]+)\]\s+(→|←)\s+(.*)/s;
 //   [deepagent:thinking] [jobId] ...
 //   [deepagent:plan] [jobId] ...
 //   [deepagent:response] [jobId] ...
-const AGENT_BLOCK_RE = /^\[(deepagent):(thinking|plan|response)\](?:\s+\[([a-f0-9-]{36})\])?\s+(.*)/s;
+const AGENT_BLOCK_RE = /^\[(deepagent):(thinking|plan|response)\](?:\s+\[([a-zA-Z0-9-]+)\])?\s+(.*)/s;
 
 // Exit code in brackets: [exit 128]
 const EXIT_CODE_RE = /\[exit (\d+)\]/;

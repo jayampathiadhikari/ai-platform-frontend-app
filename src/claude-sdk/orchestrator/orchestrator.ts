@@ -69,7 +69,7 @@ export async function runJob(
     };
 
     console.log(`[orchestrator] [${jobId}] Setting up workspace...`);
-    const workspace = await setupWorkspace(jiraStory);
+    const workspace = await setupWorkspace(jiraStory, jobId);
     console.log(`[orchestrator] [${jobId}] Workspace ready — dir=${workspace.jobDir} branch=${workspace.branch}`);
 
     // Register this job so it can be cancelled via the API

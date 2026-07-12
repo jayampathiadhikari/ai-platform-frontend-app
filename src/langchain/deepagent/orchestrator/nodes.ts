@@ -109,7 +109,7 @@ export function makeSetupWorkspaceNode(): NodeFn {
 
         console.log(`[deep:setupWorkspace] [${jobId}] Cloning repo and preparing workspace...`);
         try {
-            const workspace = await setupWorkspace(story);
+            const workspace = await setupWorkspace(story, jobId);
             console.log(
                 `[deep:setupWorkspace] [${jobId}] Ready — ` +
                 `dir=${workspace.jobDir} branch=${workspace.branch}`

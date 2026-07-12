@@ -114,9 +114,9 @@ export function makeSetupWorkspaceNode(): NodeFn {
         const { jobId, story } = state;
         if (!story) return { error: "setupWorkspace: story is missing from state" };
 
-        console.log(`[orchestrator:setupWorkspace] [${jobId}] Cloning repo and preparing workspace...`);
+        console.log(`[langchain:setupWorkspace] [${jobId}] Cloning repo and preparing workspace...`);
         try {
-            const workspace = await setupWorkspace(story);
+            const workspace = await setupWorkspace(story, jobId);
             console.log(
                 `[orchestrator:setupWorkspace] [${jobId}] Ready — ` +
                 `dir=${workspace.jobDir} branch=${workspace.branch}`

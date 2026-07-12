@@ -1,10 +1,11 @@
 import { createDeepAgent, FilesystemBackend } from "deepagents";
 import { ChatAnthropic } from "@langchain/anthropic";
+import { IterableReadableStream } from "@langchain/core/utils/stream";
 
 import type { JiraStory, Workspace } from "../../../shared/workspace-manager/types.js";
 import type { Agent, JobResult } from "../../types.js";
 import { makeBashTool } from "./helpers/bash-runner.js";
-import { extractFinalText, parseVerdict } from "./helpers/message-utils.js";
+import { extractFinalText, parseVerdict, sanitizeMessages } from "./helpers/message-utils.js";
 import { SYSTEM_PROMPT } from "./constants.js";
 
 const ANTHROPIC_MODEL  = process.env.ANTHROPIC_MODEL  ?? "claude-haiku-4-5";
@@ -48,6 +49,49 @@ export class DeepDevAgent implements Agent {
             maxTokens:   8192,
             ...(signal ? { signal } : {}),
         });
+
+        // Intercept and sanitize inputs to prevent invalid media types from reaching the API,
+        // and log any thinking blocks returned by the LLM.
+        const originalInvoke = llm.invoke.bind(llm);
+        llm.invoke = async function (input, options) {
+            const result = await originalInvoke(sanitizeMessages(input), options);
+            if (result && typeof result === "object" && Array.isArray(result.content)) {
+                for (const block of result.content) {
+                    if (block && typeof block === "object" && block.type === "thinking" && typeof block.thinking === "string") {
+                        console.log(`\n--- LLM Thinking ---\n${block.thinking}\n--------------------\n`);
+                    }
+                }
+            }
+            return result;
+        };
+
+        const originalStream = llm.stream.bind(llm);
+        llm.stream = async function (input, options) {
+            const stream = await originalStream(sanitizeMessages(input), options);
+            async function* wrapperGenerator() {
+                let accumulatedThinking = "";
+                let startedThinking = false;
+                for await (const chunk of stream) {
+                    if (chunk && typeof chunk === "object" && Array.isArray(chunk.content)) {
+                        for (const block of chunk.content) {
+                            if (block && typeof block === "object" && block.type === "thinking" && typeof block.thinking === "string") {
+                                if (!startedThinking) {
+                                    console.log(`\n--- LLM Thinking ---`);
+                                    startedThinking = true;
+                                }
+                                process.stdout.write(block.thinking);
+                                accumulatedThinking += block.thinking;
+                            }
+                        }
+                    }
+                    yield chunk;
+                }
+                if (startedThinking) {
+                    console.log(`\n--------------------\n`);
+                }
+            }
+            return IterableReadableStream.fromAsyncGenerator(wrapperGenerator());
+        };
 
         // ── Build workspace-scoped bash tool ─────────────────────────────────
         const bashTool = makeBashTool(jobDir);

@@ -43,7 +43,17 @@ RUN npm install
 RUN npx tsc
 
 # Workspace jobs directory — must match the agent container's mount point
-RUN mkdir -p /workspace/jobs
+# chown to 'node' so the non-root user can write inside job subdirectories
+RUN mkdir -p /workspace/jobs && chown -R node:node /workspace/jobs && chmod -R 775 /workspace/jobs
+
+# Configure git to trust all directories for the node user.
+# The executor intentionally runs git commands in repos cloned by root (the
+# agent container). Without this, git refuses with "dubious ownership" on every
+# repo the agent clones. safe.directory=* is safe here because the executor has
+# no credentials and the only repos it touches are the agent's job clones.
+RUN mkdir -p /home/node/.config/git \
+    && echo -e "[safe]\n\tdirectory = *" > /home/node/.config/git/config \
+    && chown -R node:node /home/node/.config
 
 # Run as non-root (node user is built into the node:alpine image)
 USER node

@@ -38,11 +38,19 @@ RUN npm ci --omit=dev
 # Copy compiled output from builder stage
 COPY --from=builder /app/dist ./dist
 
-# Workspace jobs will be mounted here (ECS volume / local bind mount)
+# Workspace jobs will be mounted here at runtime (ECS volume / local bind mount).
+# The directory is created here so the image has the path; actual permissions are
+# fixed at container startup by entrypoint.sh (volume mounts override image layers).
 RUN mkdir -p /workspace/jobs
+
+# Entrypoint fixes /workspace/jobs permissions at startup, then execs node
+COPY src/langchain/deepagent/deploy/agent/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # Expose HTTP API port
 EXPOSE 3000
 
-# Run compiled entry point
+# Runs as root so it can git-clone into the shared volume and fix permissions.
+# The entrypoint chmods /workspace/jobs then execs the node process.
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["node", "dist/index.js"]

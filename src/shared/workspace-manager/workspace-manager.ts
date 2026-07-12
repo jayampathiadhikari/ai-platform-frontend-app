@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { createHash } from "crypto";
+import { execSync } from "child_process";
 import type { JiraStory, Workspace } from "./types.js";
 
 import {
@@ -57,6 +58,13 @@ export async function setupWorkspace(story: JiraStory): Promise<Workspace> {
         await gitCreateAndCheckout(branch, jobDir);
     }
 
+    // Make the entire job directory tree world-writable so the executor sidecar
+    // (runs as node user) can read/write/git anywhere in the repo. This MUST run
+    // AFTER gitCreateAndCheckout — that call creates .git/refs/heads/agent/ as
+    // root (755), and we need it world-writable before the executor commits.
+    execSync(`chmod -R 777 "${jobDir}"`);
+    console.log(`[workspace] [${jobId}] jobDir chmod -R 777 — executor can now write`);
+
     console.log(`[workspace] [${jobId}] Writing TASK.md and CLAUDE.md`);
     await fs.writeFile(path.join(jobDir, "TASK.md"), story.taskMd, "utf8");
     await fs.writeFile(path.join(jobDir, "CLAUDE.md"), story.claudeMd, "utf8");
@@ -80,7 +88,7 @@ export async function pushAndTeardown(workspace: Workspace): Promise<void> {
     } catch (err) {
         console.error(`[workspace] [${workspace.jobId}] Push failed — proceeding with teardown:`, err);
     }
-    // await removeClone(workspace.jobDir, workspace.jobId);
+    await removeClone(workspace.jobDir, workspace.jobId);
 }
 
 /**
@@ -89,5 +97,5 @@ export async function pushAndTeardown(workspace: Workspace): Promise<void> {
  */
 export async function teardownWorkspace(workspace: Workspace): Promise<void> {
     console.log(`[workspace] [${workspace.jobId}] Tearing down workspace (no push)`);
-    // await removeClone(workspace.jobDir, workspace.jobId);
+    await removeClone(workspace.jobDir, workspace.jobId);
 }

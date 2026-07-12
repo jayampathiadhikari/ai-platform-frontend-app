@@ -98,6 +98,7 @@ Begin by using write_todos to plan your work, then implement the story step by s
                     recursionLimit: this.maxIterations * 2,
                 }
             );
+            console.log(`[deepagent] [${jobId}] Deep Agent invocation completed successfully`);
         } catch (err) {
             console.error(`[deepagent] [${jobId}] Agent threw:`, err);
             return {
@@ -125,7 +126,7 @@ Begin by using write_todos to plan your work, then implement the story step by s
 
         // ── Parse verdict from REVIEW.json ───────────────────────────────────
         const verdict = await parseVerdict(jobDir, extractFinalText(messages));
-        console.log(`[deepagent] [${jobId}] Verdict: ${verdict.verdict}${verdict.reason ? ` — ${verdict.reason}` : ""}`);
+        console.log(`[deepagent] [${jobId}] Parsed REVIEW.json verdict: ${verdict.verdict}${verdict.reason ? ` — ${verdict.reason}` : ""}`);
 
         return {
             storyId: story.id,

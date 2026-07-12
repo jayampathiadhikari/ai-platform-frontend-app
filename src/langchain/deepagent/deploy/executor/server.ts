@@ -16,7 +16,7 @@
 //   GET  /health → 200 OK
 // =============================================================================
 
-import { createServer } from "node:http";
+import { createServer, IncomingMessage } from "node:http";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { resolve, normalize } from "node:path";
@@ -27,6 +27,10 @@ const PORT           = Number(process.env.EXECUTOR_PORT ?? "8080");
 const WORKSPACE_ROOT = process.env.WORKSPACE_ROOT ?? "/workspace/jobs";
 const MAX_TIMEOUT_MS = 120_000; // hard cap: 2 minutes
 const MAX_BUFFER     = 10 * 1024 * 1024; // 10 MB output cap
+
+// Monotonic counter for correlating log lines per request
+let requestCounter = 0;
+function nextReqId(): string { return `req-${++requestCounter}`; }
 
 // ---------------------------------------------------------------------------
 // Clamp the requested cwd to within WORKSPACE_ROOT.
@@ -47,7 +51,7 @@ function safeCwd(requested?: string): string {
 // ---------------------------------------------------------------------------
 // Read the full request body as a string
 // ---------------------------------------------------------------------------
-function readBody(req: Parameters<typeof createServer>[1] extends ((req: infer R, res: unknown) => void) ? R : never): Promise<string> {
+function readBody(req: IncomingMessage): Promise<string> {
     return new Promise((resolve, reject) => {
         const chunks: Buffer[] = [];
         req.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -60,8 +64,13 @@ function readBody(req: Parameters<typeof createServer>[1] extends ((req: infer R
 // HTTP server
 // ---------------------------------------------------------------------------
 const server = createServer(async (req, res) => {
+    const rid   = nextReqId();
+    const start = Date.now();
+    console.info(`[executor] [${rid}] → ${req.method} ${req.url}`);
+
     // Health check
     if (req.method === "GET" && req.url === "/health") {
+        console.info(`[executor] [${rid}] health-check OK (${Date.now() - start}ms)`);
         res.writeHead(200, { "Content-Type": "text/plain" });
         res.end("OK");
         return;
@@ -71,8 +80,11 @@ const server = createServer(async (req, res) => {
     if (req.method === "POST" && req.url === "/exec") {
         let body: { command?: unknown; cwd?: unknown; timeout?: unknown };
         try {
-            body = JSON.parse(await readBody(req)) as typeof body;
-        } catch {
+            const raw = await readBody(req);
+            console.info(`[executor] [${rid}] body received (${raw.length} bytes)`);
+            body = JSON.parse(raw) as typeof body;
+        } catch (parseErr) {
+            console.warn(`[executor] [${rid}] body parse error: ${String(parseErr)}`);
             res.writeHead(400, { "Content-Type": "application/json" });
             res.end(JSON.stringify({ error: "Invalid JSON body" }));
             return;
@@ -80,6 +92,7 @@ const server = createServer(async (req, res) => {
 
         const command = typeof body.command === "string" ? body.command : null;
         if (!command) {
+            console.warn(`[executor] [${rid}] rejected: missing or non-string 'command' field`);
             res.writeHead(400, { "Content-Type": "application/json" });
             res.end(JSON.stringify({ error: "command is required and must be a string" }));
             return;
@@ -91,7 +104,12 @@ const server = createServer(async (req, res) => {
             MAX_TIMEOUT_MS
         );
 
-        console.log(`[executor] exec: ${command.slice(0, 200)} (cwd=${cwd} timeout=${timeout}ms)`);
+        console.info(
+            `[executor] [${rid}] exec start` +
+            ` | cmd: ${command.slice(0, 200)}${command.length > 200 ? "…" : ""}` +
+            ` | cwd: ${cwd}` +
+            ` | timeout: ${timeout}ms`
+        );
 
         try {
             const { stdout, stderr } = await execAsync(command, {
@@ -112,6 +130,15 @@ const server = createServer(async (req, res) => {
                 },
             });
 
+            const elapsed = Date.now() - start;
+            console.info(
+                `[executor] [${rid}] exec success` +
+                ` | exit: 0` +
+                ` | stdout: ${stdout.length}B` +
+                ` | stderr: ${stderr.length}B` +
+                ` | elapsed: ${elapsed}ms`
+            );
+
             res.writeHead(200, { "Content-Type": "application/json" });
             res.end(JSON.stringify({ stdout, stderr, exitCode: 0 }));
         } catch (err: unknown) {
@@ -123,7 +150,23 @@ const server = createServer(async (req, res) => {
                 killed?: boolean;
             };
             const exitCode = typeof e.code === "number" ? e.code : 1;
-            console.error(`[executor] Command failed (exit=${exitCode}): ${e.message ?? String(err)}`);
+            const elapsed  = Date.now() - start;
+
+            if (e.killed) {
+                console.warn(
+                    `[executor] [${rid}] exec TIMEOUT` +
+                    ` | timeout: ${timeout}ms` +
+                    ` | elapsed: ${elapsed}ms`
+                );
+            } else {
+                console.error(
+                    `[executor] [${rid}] exec failed` +
+                    ` | exit: ${exitCode}` +
+                    ` | elapsed: ${elapsed}ms` +
+                    ` | message: ${e.message ?? String(err)}`
+                );
+            }
+
             res.writeHead(200, { "Content-Type": "application/json" }); // 200 even on non-zero exit
             res.end(JSON.stringify({
                 stdout:   e.stdout ?? "",
@@ -135,11 +178,16 @@ const server = createServer(async (req, res) => {
     }
 
     // Unknown route
+    console.warn(`[executor] [${rid}] 404 unknown route: ${req.method} ${req.url}`);
     res.writeHead(404, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ error: "Not found" }));
 });
 
 server.listen(PORT, "127.0.0.1", () => {
-    console.log(`[executor] Listening on 127.0.0.1:${PORT}`);
-    console.log(`[executor] WORKSPACE_ROOT=${WORKSPACE_ROOT}`);
+    console.info(`[executor] ┌─ Executor sidecar started ───────────────────────`);
+    console.info(`[executor] │  listening:      127.0.0.1:${PORT}`);
+    console.info(`[executor] │  WORKSPACE_ROOT: ${WORKSPACE_ROOT}`);
+    console.info(`[executor] │  MAX_TIMEOUT_MS: ${MAX_TIMEOUT_MS}ms`);
+    console.info(`[executor] │  MAX_BUFFER:     ${MAX_BUFFER / 1024 / 1024}MB`);
+    console.info(`[executor] └────────────────────────────────────────────────`);
 });

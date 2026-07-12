@@ -1,0 +1,110 @@
+# =============================================================================
+# IAM Policies for ECS Fargate — DeepDevAgent
+# =============================================================================
+#
+# TWO roles are required:
+#
+#   1. deepagent-execution-role
+#      Used by the ECS control plane (not your containers) to:
+#        - Pull images from ECR
+#        - Write CloudWatch logs
+#        - Fetch secrets from Secrets Manager at task start
+#
+#   2. deepagent-task-role
+#      Used by the AGENT container at runtime to access AWS services.
+#      The EXECUTOR container does NOT use this role (no credentials injected).
+#
+# Replace ACCOUNT_ID and REGION before deploying.
+# =============================================================================
+
+
+# ── 1. Execution Role ─────────────────────────────────────────────────────────
+# Attach AWS managed policy: AmazonECSTaskExecutionRolePolicy
+# Plus this inline policy for Secrets Manager access:
+
+ExecutionRoleInlinePolicy:
+  Version: "2012-10-17"
+  Statement:
+
+    - Sid: PullSecretsForTask
+      Effect: Allow
+      Action:
+        - secretsmanager:GetSecretValue
+      Resource:
+        - arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:deepagent/anthropic-api-key*
+        - arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:deepagent/github-token*
+
+    - Sid: WriteLogs
+      Effect: Allow
+      Action:
+        - logs:CreateLogGroup
+        - logs:CreateLogStream
+        - logs:PutLogEvents
+      Resource:
+        - arn:aws:logs:REGION:ACCOUNT_ID:log-group:/ecs/deepagent/*
+
+
+# ── 2. Task Role ──────────────────────────────────────────────────────────────
+# Attached to the ECS task — grants the AGENT container AWS API access.
+# Keep this as narrow as possible.
+
+TaskRolePolicy:
+  Version: "2012-10-17"
+  Statement:
+
+    # The agent needs to write its own logs
+    - Sid: WriteLogs
+      Effect: Allow
+      Action:
+        - logs:CreateLogStream
+        - logs:PutLogEvents
+      Resource:
+        - arn:aws:logs:REGION:ACCOUNT_ID:log-group:/ecs/deepagent/agent:*
+
+    # If the agent needs to read/write S3 for checkpoints or artifacts,
+    # scope it to a specific bucket and prefix:
+    # - Sid: AgentS3Access
+    #   Effect: Allow
+    #   Action:
+    #     - s3:GetObject
+    #     - s3:PutObject
+    #   Resource:
+    #     - arn:aws:s3:::your-deepagent-bucket/jobs/*
+
+    # No EC2, no Lambda, no IAM — deny everything else implicitly.
+
+
+# ── Security Group (for the ECS service) ─────────────────────────────────────
+SecurityGroupRules:
+
+  Inbound:
+    # Allow traffic from your ALB or internal VPC only
+    - Protocol: tcp
+      Port:     3000
+      Source:   sg-YOUR_ALB_SECURITY_GROUP   # or your VPC CIDR
+
+  Outbound:
+    # HTTPS to Anthropic API + GitHub
+    - Protocol: tcp
+      Port:     443
+      Destination: 0.0.0.0/0
+
+    # Explicitly DENY the IMDS endpoint at the security group level
+    # Note: AWS SGs are stateful and deny-by-default for inbound,
+    # but you cannot add explicit DENY rules to SGs.
+    # Use a VPC Network ACL instead for IMDS blocking:
+
+VpcNetworkAcl:
+  # Add this NACL rule to the subnet(s) where the ECS tasks run:
+  # Priority 90 — DENY egress to 169.254.170.2 (ECS credential endpoint)
+  - RuleNumber:  90
+    Protocol:    tcp
+    PortRange:   80-80
+    Destination: 169.254.170.2/32
+    Action:      DENY
+  # Priority 91 — DENY egress to 169.254.169.254 (EC2 IMDS, just in case)
+  - RuleNumber:  91
+    Protocol:    tcp
+    PortRange:   80-80
+    Destination: 169.254.169.254/32
+    Action:      DENY

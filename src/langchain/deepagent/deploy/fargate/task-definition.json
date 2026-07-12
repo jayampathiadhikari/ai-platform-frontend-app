@@ -1,0 +1,111 @@
+{
+  "family": "deepagent-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+
+  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/deepagent-execution-role",
+  "taskRoleArn":      "arn:aws:iam::ACCOUNT_ID:role/deepagent-task-role",
+
+  "volumes": [
+    {
+      "name": "jobs",
+      "host": {}
+    }
+  ],
+
+  "containerDefinitions": [
+
+    {
+      "name": "agent",
+      "image": "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/deepagent-agent:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "jobs",
+          "containerPath": "/workspace/jobs",
+          "readOnly": false
+        }
+      ],
+      "environment": [
+        { "name": "PORT",            "value": "3000"             },
+        { "name": "JOBS_DIR",        "value": "/workspace/jobs"  },
+        { "name": "MAX_TURNS",       "value": "60"               },
+        { "name": "ANTHROPIC_MODEL", "value": "claude-haiku-4-5" },
+        { "name": "EXECUTOR_URL",    "value": "http://127.0.0.1:8080" }
+      ],
+      "secrets": [
+        {
+          "name":      "ANTHROPIC_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:deepagent/anthropic-api-key"
+        },
+        {
+          "name":      "GITHUB_TOKEN",
+          "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:deepagent/github-token"
+        }
+      ],
+      "dependsOn": [
+        {
+          "containerName": "executor",
+          "condition": "HEALTHY"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group":         "/ecs/deepagent/agent",
+          "awslogs-region":        "REGION",
+          "awslogs-stream-prefix": "agent"
+        }
+      },
+      "healthCheck": {
+        "command":     ["CMD-SHELL", "wget -qO- http://localhost:3000/jobs || exit 1"],
+        "interval":    10,
+        "timeout":     5,
+        "retries":     3,
+        "startPeriod": 30
+      }
+    },
+
+    {
+      "name": "executor",
+      "image": "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/deepagent-executor:latest",
+      "essential": true,
+      "mountPoints": [
+        {
+          "sourceVolume": "jobs",
+          "containerPath": "/workspace/jobs",
+          "readOnly": false
+        }
+      ],
+      "environment": [
+        { "name": "EXECUTOR_PORT",  "value": "8080"            },
+        { "name": "WORKSPACE_ROOT", "value": "/workspace/jobs" }
+      ],
+      "secrets": [],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group":         "/ecs/deepagent/executor",
+          "awslogs-region":        "REGION",
+          "awslogs-stream-prefix": "executor"
+        }
+      },
+      "healthCheck": {
+        "command":     ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health || exit 1"],
+        "interval":    5,
+        "timeout":     3,
+        "retries":     5,
+        "startPeriod": 10
+      }
+    }
+
+  ]
+}

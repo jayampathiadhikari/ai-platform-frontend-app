@@ -1,0 +1,111 @@
+# =============================================================================
+# docker-compose.yml — Local development (mirrors ECS Fargate sidecar pattern)
+# =============================================================================
+#
+# Runs two containers that replicate the production ECS task structure:
+#
+#   agent     — the DeepDevAgent (holds API keys, runs the LLM loop)
+#   executor  — the bash executor sidecar (no credentials, minimal tools)
+#
+# Both containers share:
+#   - A named volume "jobs" mounted at /workspace/jobs (the jobDir root)
+#   - The same network (so agent can reach executor on localhost:8080)
+#
+# Usage:
+#   cp .env.example .env          # fill in ANTHROPIC_API_KEY, GITHUB_TOKEN
+#   docker compose up --build     # first run: builds both images
+#   docker compose up             # subsequent runs (no source changes)
+#   docker compose down -v        # stop and remove volumes
+#
+# Test:
+#   curl -X POST http://localhost:3000/run/deepagent \
+#        -H "Content-Type: application/json" \
+#        -d '{"jiraId": "PROJ-1"}'
+# =============================================================================
+
+services:
+
+  # ── Agent container ─────────────────────────────────────────────────────────
+  agent:
+    build:
+      context: ../../../..          # repo root (so TS build has access to all src/)
+      dockerfile: src/langchain/deepagent/deploy/agent/Dockerfile
+    image: deepagent-agent:local
+    container_name: deepagent-agent
+
+    ports:
+      - "3000:3000"                 # expose HTTP API for local curl / testing
+
+    volumes:
+      - jobs:/workspace/jobs        # shared workspace volume with executor
+
+    environment:
+      # ── Server ──────────────────────────────────────────────────────────────
+      PORT:            "3000"
+      # ── Agent limits ────────────────────────────────────────────────────────
+      MAX_TURNS:       "60"
+      ANTHROPIC_MODEL: "claude-haiku-4-5"
+      # ── Workspace ───────────────────────────────────────────────────────────
+      JOBS_DIR:        "/workspace/jobs"
+      # ── Executor sidecar endpoint ────────────────────────────────────────────
+      # Agent's makeBashTool reads this to decide where to send commands.
+      # In ECS this will be 127.0.0.1:8080 (shared network namespace).
+      EXECUTOR_URL:    "http://executor:8080"
+
+    env_file:
+      - ../../../../.env            # loads ANTHROPIC_API_KEY, GITHUB_TOKEN, etc.
+
+    depends_on:
+      executor:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+    networks:
+      - agent-net
+
+
+  # ── Executor sidecar ────────────────────────────────────────────────────────
+  executor:
+    build:
+      context: ../../../..
+      dockerfile: src/langchain/deepagent/deploy/executor/Dockerfile
+    image: deepagent-executor:local
+    container_name: deepagent-executor
+
+    volumes:
+      - jobs:/workspace/jobs        # same shared volume — executes code inside jobDirs
+
+    environment:
+      EXECUTOR_PORT:   "8080"
+      WORKSPACE_ROOT:  "/workspace/jobs"
+      # ── NO AWS credentials injected here — intentional ─────────────────────
+      # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN
+      # AWS_CONTAINER_CREDENTIALS_RELATIVE_URI are all deliberately absent.
+
+    healthcheck:
+      test:     ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 5s
+      timeout:  3s
+      retries:  5
+
+    restart: unless-stopped
+
+    networks:
+      - agent-net
+
+
+# ── Shared volume ────────────────────────────────────────────────────────────
+volumes:
+  jobs:
+    driver: local
+
+
+# ── Network ──────────────────────────────────────────────────────────────────
+# Both containers share a bridge network so agent can reach executor by
+# hostname "executor". In ECS Fargate, they share the same network namespace
+# and communicate over 127.0.0.1 instead — the EXECUTOR_URL env var handles
+# this difference transparently.
+networks:
+  agent-net:
+    driver: bridge

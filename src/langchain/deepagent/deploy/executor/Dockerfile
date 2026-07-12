@@ -51,9 +51,12 @@ RUN mkdir -p /workspace/jobs && chown -R node:node /workspace/jobs && chmod -R 7
 # agent container). Without this, git refuses with "dubious ownership" on every
 # repo the agent clones. safe.directory=* is safe here because the executor has
 # no credentials and the only repos it touches are the agent's job clones.
-RUN mkdir -p /home/node/.config/git \
-    && echo -e "[safe]\n\tdirectory = *" > /home/node/.config/git/config \
-    && chown -R node:node /home/node/.config
+#
+# Must be done AS the node user (git config --global writes to ~/.gitconfig),
+# then we drop back to root for the remaining RUN steps.
+USER node
+RUN git config --global safe.directory '*'
+USER root
 
 # Run as non-root (node user is built into the node:alpine image)
 USER node

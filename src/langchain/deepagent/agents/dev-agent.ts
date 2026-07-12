@@ -42,11 +42,15 @@ export class DeepDevAgent implements Agent {
         console.log(`[deepagent] [${jobId}] Starting — story=${story.id} cwd=${jobDir}`);
         console.log(`[deepagent] [${jobId}] Model=${this.model} maxIterations=${this.maxIterations}`);
 
-        // ── Build the model ─────────────────────────────────────────────────
+        // ── Build the model ─────────────────────────────────────────────────────
         const llm = new ChatAnthropic({
             model:       this.model,
-            temperature: 0,
-            maxTokens:   8192,
+            temperature: 1,   // extended thinking requires temperature=1
+            maxTokens:   10000,
+            thinking: {
+                type:         "enabled",
+                budget_tokens: 3000,  // moderate — concise reasoning without full deliberation
+            },
             ...(signal ? { signal } : {}),
         });
 
@@ -57,8 +61,16 @@ export class DeepDevAgent implements Agent {
             const result = await originalInvoke(sanitizeMessages(input), options);
             if (result && typeof result === "object" && Array.isArray(result.content)) {
                 for (const block of result.content) {
-                    if (block && typeof block === "object" && block.type === "thinking" && typeof block.thinking === "string") {
-                        console.log(`\n--- LLM Thinking ---\n${block.thinking}\n--------------------\n`);
+                    if (block && typeof block === "object") {
+                        if (block.type === "thinking" && typeof block.thinking === "string") {
+                            console.log(`\n╭─ 🧠 Agent Thinking ────────────────────────────────────────`);
+                            console.log(block.thinking);
+                            console.log(`╰────────────────────────────────────────────────────────────`);
+                        } else if (block.type === "text" && typeof block.text === "string" && block.text.trim()) {
+                            console.log(`\n╭─ 🤖 Agent Response ────────────────────────────────────────`);
+                            console.log(block.text);
+                            console.log(`╰────────────────────────────────────────────────────────────`);
+                        }
                     }
                 }
             }
@@ -69,25 +81,36 @@ export class DeepDevAgent implements Agent {
         llm.stream = async function (input, options) {
             const stream = await originalStream(sanitizeMessages(input), options);
             async function* wrapperGenerator() {
-                let accumulatedThinking = "";
-                let startedThinking = false;
+                let inThinking = false;
+                let inText = false;
                 for await (const chunk of stream) {
                     if (chunk && typeof chunk === "object" && Array.isArray(chunk.content)) {
                         for (const block of chunk.content) {
-                            if (block && typeof block === "object" && block.type === "thinking" && typeof block.thinking === "string") {
-                                if (!startedThinking) {
-                                    console.log(`\n--- LLM Thinking ---`);
-                                    startedThinking = true;
+                            if (block && typeof block === "object") {
+                                if (block.type === "thinking" && typeof block.thinking === "string") {
+                                    if (!inThinking) {
+                                        console.log(`\n╭─ 🧠 Agent Thinking ────────────────────────────────────────`);
+                                        inThinking = true;
+                                    }
+                                    process.stdout.write(block.thinking);
+                                } else if (block.type === "text" && typeof block.text === "string" && block.text) {
+                                    if (inThinking) {
+                                        console.log(`\n╰────────────────────────────────────────────────────────────`);
+                                        inThinking = false;
+                                    }
+                                    if (!inText) {
+                                        console.log(`\n╭─ 🤖 Agent Response ────────────────────────────────────────`);
+                                        inText = true;
+                                    }
+                                    process.stdout.write(block.text);
                                 }
-                                process.stdout.write(block.thinking);
-                                accumulatedThinking += block.thinking;
                             }
                         }
                     }
                     yield chunk;
                 }
-                if (startedThinking) {
-                    console.log(`\n--------------------\n`);
+                if (inThinking || inText) {
+                    console.log(`\n╰────────────────────────────────────────────────────────────\n`);
                 }
             }
             return IterableReadableStream.fromAsyncGenerator(wrapperGenerator());

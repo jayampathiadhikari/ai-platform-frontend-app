@@ -1,5 +1,4 @@
 import type { ParsedLogEntry, LogSource, ComponentTag, LogLevel, BashActionType, AgentBlock } from "./types";
-import { randomUUID } from "crypto";
 
 // ─── Regex patterns ───────────────────────────────────────────────────────────
 
@@ -10,10 +9,10 @@ const COMPONENT_RE = /^\[([^\]]+)\](?:\s+\[([a-f0-9-]{36})\])?\s+(.*)/s;
 const BASH_ACTION_RE = /^\[([A-Z:\/]+)\]\s+(→|←)\s+(.*)/s;
 
 // Structured agent block lines (flat, single-line format):
-//   [deepagent:thinking] ...
-//   [deepagent:plan] ...
-//   [deepagent:response] ...
-const AGENT_BLOCK_RE = /^\[(deepagent):(thinking|plan|response)\]\s+(.*)/s;
+//   [deepagent:thinking] [jobId] ...
+//   [deepagent:plan] [jobId] ...
+//   [deepagent:response] [jobId] ...
+const AGENT_BLOCK_RE = /^\[(deepagent):(thinking|plan|response)\](?:\s+\[([a-f0-9-]{36})\])?\s+(.*)/s;
 
 // Exit code in brackets: [exit 128]
 const EXIT_CODE_RE = /\[exit (\d+)\]/;
@@ -34,7 +33,7 @@ function detectLevel(component: string | null, message: string, rawLine: string)
 // ─── Main parser ──────────────────────────────────────────────────────────────
 
 export function parseLogLine(rawLine: string, source: LogSource): ParsedLogEntry {
-  const id = randomUUID();
+  const id = crypto.randomUUID();
   const timestamp = new Date().toISOString();
   const trimmed = rawLine.trim();
 
@@ -56,8 +55,9 @@ export function parseLogLine(rawLine: string, source: LogSource): ParsedLogEntry
   const agentMatch = AGENT_BLOCK_RE.exec(trimmed);
   if (agentMatch) {
     const agentBlock = agentMatch[2] as AgentBlock;
-    const message = agentMatch[3] ?? "";
-    return { ...base, component: "deepagent", agentBlock, message, level: "info" };
+    const jobId = agentMatch[3] ?? null;
+    const message = agentMatch[4] ?? "";
+    return { ...base, component: "deepagent", jobId, agentBlock, message, level: "info" };
   }
 
   // ── Standard [component] [jobId?] message pattern ────────────────────────

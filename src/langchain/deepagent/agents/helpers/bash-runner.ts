@@ -126,12 +126,12 @@ export async function runLocally(
 // makeBashTool — workspace-scoped bash tool factory
 // ---------------------------------------------------------------------------
 
-export function makeBashTool(cwd: string) {
+export function makeBashTool(cwd: string, jobId: string) {
     return tool(
         async ({ command, timeout }: { command: string; timeout?: number }) => {
             const guard = checkBashGuard(command);
             if (guard.blocked) {
-                console.warn(`[deepagent:bash] Blocked: ${command.slice(0, 120)}\n  Reason: ${guard.reason}`);
+                console.warn(`[deepagent:bash] [${jobId}] Blocked: ${command.slice(0, 120)}\n  Reason: ${guard.reason}`);
                 return `BLOCKED: ${guard.reason}`;
             }
 
@@ -142,15 +142,15 @@ export function makeBashTool(cwd: string) {
             if (EXECUTOR_URL) {
                 // ── Sandboxed path: route through executor sidecar ──────────
                 // Option 2: semantic label  Option 1: echo result
-                console.log(`[deepagent:bash] [${action}] → ${command.slice(0, 200)}`);
+                console.log(`[deepagent:bash] [${jobId}] [${action}] → ${command.slice(0, 200)}`);
                 const result = await runViaExecutor(command, cwd, effectiveTimeout);
-                console.log(`[deepagent:bash] [${action}] ← ${formatResult(result)}`);
+                console.log(`[deepagent:bash] [${jobId}] [${action}] ← ${formatResult(result)}`);
                 return result;
             } else {
                 // ── Local dev path: run directly (no Docker) ───────────────
-                console.log(`[deepagent:bash] [${action}] local: ${command.slice(0, 200)}`);
+                console.log(`[deepagent:bash] [${jobId}] [${action}] local: ${command.slice(0, 200)}`);
                 const result = await runLocally(command, cwd, effectiveTimeout);
-                console.log(`[deepagent:bash] [${action}] ← ${formatResult(result)}`);
+                console.log(`[deepagent:bash] [${jobId}] [${action}] ← ${formatResult(result)}`);
                 return result;
             }
         },

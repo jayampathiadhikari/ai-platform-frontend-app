@@ -66,13 +66,13 @@ export class DeepDevAgent implements Agent {
                 for (const block of result.content) {
                     if (block && typeof block === "object") {
                         if (block.type === "thinking" && typeof block.thinking === "string") {
-                            console.log(`[deepagent:thinking] ${block.thinking.replace(/\n/g, " ").trim()}`);
+                            console.log(`[deepagent:thinking] [${jobId}] ${block.thinking.replace(/\n/g, " ").trim()}`);
                         } else if (block.type === "text" && typeof block.text === "string" && block.text.trim()) {
                             if (!firstTextLogged) {
                                 firstTextLogged = true;
-                                console.log(`[deepagent:plan] ${block.text.replace(/\n/g, " ").trim()}`);
+                                console.log(`[deepagent:plan] [${jobId}] ${block.text.replace(/\n/g, " ").trim()}`);
                             } else {
-                                console.log(`[deepagent:response] ${block.text.replace(/\n/g, " ").trim()}`);
+                                console.log(`[deepagent:response] [${jobId}] ${block.text.replace(/\n/g, " ").trim()}`);
                             }
                         }
                     }
@@ -99,7 +99,7 @@ export class DeepDevAgent implements Agent {
                                 } else if (block.type === "text" && typeof block.text === "string" && block.text) {
                                     if (inThinking) {
                                         // Flush accumulated thinking as a single structured line
-                                        console.log(`[deepagent:thinking] ${thinkingBuf.replace(/\n/g, " ").trim()}`);
+                                        console.log(`[deepagent:thinking] [${jobId}] ${thinkingBuf.replace(/\n/g, " ").trim()}`);
                                         thinkingBuf = "";
                                         inThinking = false;
                                     }
@@ -115,17 +115,17 @@ export class DeepDevAgent implements Agent {
                 if (textBuf.trim()) {
                     const tag = firstTextLogged ? "[deepagent:response]" : "[deepagent:plan]";
                     firstTextLogged = true;
-                    console.log(`${tag} ${textBuf.replace(/\n/g, " ").trim()}`);
+                    console.log(`${tag} [${jobId}] ${textBuf.replace(/\n/g, " ").trim()}`);
                 }
                 if (inThinking && thinkingBuf.trim()) {
-                    console.log(`[deepagent:thinking] ${thinkingBuf.replace(/\n/g, " ").trim()}`);
+                    console.log(`[deepagent:thinking] [${jobId}] ${thinkingBuf.replace(/\n/g, " ").trim()}`);
                 }
             }
             return IterableReadableStream.fromAsyncGenerator(wrapperGenerator());
         };
 
         // ── Build workspace-scoped bash tool ─────────────────────────────────
-        const bashTool = makeBashTool(jobDir);
+        const bashTool = makeBashTool(jobDir, jobId);
 
         // ── Create the Deep Agent ────────────────────────────────────────────
         //

@@ -2,6 +2,7 @@
 
 import { useLogStream } from "@/hooks/useLogStream";
 import { JobCard } from "@/components/JobCard";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Wifi, WifiOff, Activity, Bot, Loader2
@@ -15,8 +16,8 @@ function StatusBar({ connected, error, jobCount }: {
   jobCount: number;
 }) {
   return (
-    <div className="flex items-center gap-3 px-4 py-2 bg-[#0a0c10] border-b border-white/5 text-xs">
-      <div className={`flex items-center gap-1.5 font-medium ${connected ? "text-emerald-400" : "text-red-400"}`}>
+    <div className="flex items-center gap-3 px-4 py-2 bg-muted/30 border-b border-border text-xs">
+      <div className={`flex items-center gap-1.5 font-medium ${connected ? "text-emerald-500 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
         {connected
           ? <><Wifi className="w-3.5 h-3.5" /> Live</>
           : <><WifiOff className="w-3.5 h-3.5" /> {error ?? "Disconnected"}</>
@@ -54,27 +55,29 @@ export default function Dashboard() {
   const { jobs, connected, error } = useLogStream();
 
   return (
-    <div className="flex flex-col h-screen bg-[#080a0f] text-slate-200">
+    <div className="flex flex-col h-screen bg-background text-foreground transition-colors">
 
       {/* ── Header ── */}
-      <header className="flex items-center gap-3 px-5 py-3 bg-[#0a0c10] border-b border-white/5">
+      <header className="flex items-center gap-3 px-5 py-3 bg-card border-b border-border">
         <div className="flex items-center gap-2">
           <div className="relative">
-            <Bot className="w-6 h-6 text-violet-400" />
+            <Bot className="w-6 h-6 text-violet-500 dark:text-violet-400" />
             {connected && (
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-500 dark:bg-emerald-400 rounded-full animate-pulse" />
             )}
           </div>
-          <span className="text-sm font-bold text-slate-100 tracking-tight">DeepAgent Monitor</span>
+          <span className="text-sm font-bold text-foreground tracking-tight">DeepAgent Monitor</span>
         </div>
 
-        <div className="flex items-center gap-1.5 ml-auto">
+        <div className="flex items-center gap-2 ml-auto">
           {jobs.filter(j => j.status === "running").map(j => (
-            <span key={j.jobId} className="flex items-center gap-1 text-[11px] bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded-full">
+            <span key={j.jobId} className="flex items-center gap-1 text-[11px] bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded-full">
               <Loader2 className="w-2.5 h-2.5 animate-spin" />
               {j.jiraId ?? j.jobId.slice(0, 6)}
             </span>
           ))}
+          <div className="w-px h-4 bg-border mx-1" />
+          <ThemeToggle />
         </div>
       </header>
 

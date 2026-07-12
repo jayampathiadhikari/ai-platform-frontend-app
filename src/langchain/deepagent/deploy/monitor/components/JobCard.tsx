@@ -16,9 +16,9 @@ import { Separator } from "@/components/ui/separator";
 function VerdictBadge({ verdict }: { verdict?: string }) {
   if (!verdict) return null;
   const map: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-    PASS:    { label: "PASS",    color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30", icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
-    FAIL:    { label: "FAIL",    color: "bg-red-500/20     text-red-300     border-red-500/30",     icon: <XCircle className="w-3.5 h-3.5" /> },
-    PARTIAL: { label: "PARTIAL", color: "bg-yellow-500/20  text-yellow-300  border-yellow-500/30",  icon: <AlertTriangle className="w-3.5 h-3.5" /> },
+    PASS:    { label: "PASS",    color: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30", icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+    FAIL:    { label: "FAIL",    color: "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30", icon: <XCircle className="w-3.5 h-3.5" /> },
+    PARTIAL: { label: "PARTIAL", color: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30", icon: <AlertTriangle className="w-3.5 h-3.5" /> },
   };
   const cfg = map[verdict];
   if (!cfg) return null;
@@ -56,7 +56,7 @@ function PipelineProgress({ entries }: { entries: JobGroup["entries"] }) {
         return (
           <div key={stage} className="flex items-center gap-1">
             {i > 0 && (
-              <div className={`w-4 h-px ${active ? "bg-slate-500" : "bg-slate-700"}`} />
+              <div className={`w-4 h-px ${active ? "bg-muted-foreground" : "bg-muted-foreground/30"}`} />
             )}
             <ComponentBadge tag={active ? stage : null} size="sm" />
           </div>
@@ -92,7 +92,7 @@ export function JobCard({ job }: JobCardProps) {
   const glow = glowMap[job.status] ?? "";
 
   return (
-    <Card className={`bg-[#0f1117] border shadow-lg ${glow} transition-all duration-500`}>
+    <Card className={`bg-card border shadow-lg ${glow} transition-all duration-500`}>
       {/* ── Header ── */}
       <CardHeader className="pb-2 pt-3 px-4">
         <div className="flex items-start gap-3">
@@ -102,16 +102,16 @@ export function JobCard({ job }: JobCardProps) {
             {/* Top row: jiraId + verdict + PR link */}
             <div className="flex items-center gap-2 flex-wrap">
               {job.jiraId && (
-                <span className="text-sm font-bold text-slate-100 font-mono">{job.jiraId}</span>
+                <span className="text-sm font-bold text-foreground font-mono">{job.jiraId}</span>
               )}
-              <span className="text-[11px] text-slate-600 font-mono">#{shortJobId}</span>
+              <span className="text-[11px] text-muted-foreground font-mono">#{shortJobId}</span>
               <VerdictBadge verdict={job.verdict} />
               {job.prUrl && (
                 <a
                   href={job.prUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[11px] text-sky-400 hover:text-sky-300 transition-colors"
+                  className="flex items-center gap-1 text-[11px] text-sky-600 dark:text-sky-400 hover:opacity-80 transition-opacity"
                 >
                   <GitPullRequest className="w-3 h-3" />
                   View PR
@@ -127,13 +127,13 @@ export function JobCard({ job }: JobCardProps) {
 
           {/* Elapsed + toggle */}
           <div className="flex items-center gap-3 shrink-0">
-            <span className="flex items-center gap-1 text-[11px] text-slate-500">
+            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
               <Clock className="w-3 h-3" />
               {elapsed}s
             </span>
             <button
               onClick={() => setExpanded(e => !e)}
-              className="text-slate-500 hover:text-slate-300 transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors"
               aria-label={expanded ? "Collapse" : "Expand"}
             >
               {expanded
@@ -148,7 +148,7 @@ export function JobCard({ job }: JobCardProps) {
       {/* ── Log entries ── */}
       {expanded && (
         <>
-          <Separator className="bg-white/5" />
+          <Separator className="bg-border" />
           <CardContent className="p-0 pb-2">
             <div className="flex flex-col">
               {job.entries.map(entry => (

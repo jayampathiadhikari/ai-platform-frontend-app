@@ -15,8 +15,7 @@ export function ComponentBadge({ tag, size = "sm" }: ComponentBadgeProps) {
 
   return (
     <span
-      className={`inline-flex items-center rounded-full font-mono font-semibold tracking-tight leading-none ${px}`}
-      style={{ backgroundColor: cfg.hex, color: "#e2e8f0" }}
+      className={`inline-flex items-center rounded-full font-mono tracking-tight leading-none ${px} ${cfg.color} ${cfg.textColor}`}
     >
       {label}
     </span>

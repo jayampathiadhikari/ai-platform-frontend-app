@@ -13,7 +13,7 @@ import {
 
 function BashIcon({ action, direction }: { action?: string; direction?: "→" | "←" }) {
   if (direction === "←") return <ArrowLeft className="w-3.5 h-3.5 text-emerald-400" />;
-  if (!action)            return <Terminal className="w-3.5 h-3.5 text-slate-400" />;
+  if (!action)            return <Terminal className="w-3.5 h-3.5 text-muted-foreground" />;
 
   const a = action.toUpperCase();
   if (a.includes("COMMIT") && a.includes("PUSH")) return <GitCommit className="w-3.5 h-3.5 text-amber-400" />;
@@ -23,8 +23,8 @@ function BashIcon({ action, direction }: { action?: string; direction?: "→" | 
   if (a.includes("STATUS")) return <GitBranch className="w-3.5 h-3.5 text-sky-400" />;
   if (a.includes("INSTALL"))return <Package className="w-3.5 h-3.5 text-violet-400" />;
   if (a.includes("WRITE"))  return <FileEdit className="w-3.5 h-3.5 text-green-400" />;
-  if (a.includes("READ"))   return <ChevronRight className="w-3.5 h-3.5 text-slate-400" />;
-  return <Terminal className="w-3.5 h-3.5 text-slate-400" />;
+  if (a.includes("READ"))   return <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />;
+  return <Terminal className="w-3.5 h-3.5 text-muted-foreground" />;
 }
 
 function AgentBlockIcon({ block }: { block?: string }) {
@@ -38,7 +38,7 @@ function LevelIcon({ level }: { level: string }) {
   if (level === "error")   return <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />;
   if (level === "warn")    return <AlertCircle className="w-3.5 h-3.5 text-yellow-400 shrink-0" />;
   if (level === "success") return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />;
-  return <Info className="w-3.5 h-3.5 text-slate-500 shrink-0" />;
+  return <Info className="w-3.5 h-3.5 text-muted-foreground shrink-0" />;
 }
 
 // ─── Message text formatting ──────────────────────────────────────────────────
@@ -58,14 +58,14 @@ function MessageText({ entry }: { entry: ParsedLogEntry }) {
       response: "Agent response",
     };
     return (
-      <span className="italic text-slate-300 font-medium">{labels[agentBlock] ?? message}</span>
+      <span className="italic text-foreground/80 font-medium">{labels[agentBlock] ?? message}</span>
     );
   }
 
   // Bash output (←) — monospace, dimmed
   if (bashDirection === "←") {
     return (
-      <span className="font-mono text-[11px] text-emerald-300/80 leading-tight break-all">
+      <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-300/80 leading-tight break-all">
         {truncate(message)}
       </span>
     );
@@ -74,7 +74,7 @@ function MessageText({ entry }: { entry: ParsedLogEntry }) {
   // Bash command (→)
   if (bashDirection === "→") {
     return (
-      <span className="font-mono text-[11px] text-sky-300 leading-tight break-all">
+      <span className="font-mono text-[11px] text-sky-600 dark:text-sky-300 leading-tight break-all">
         {truncate(message)}
       </span>
     );
@@ -82,12 +82,12 @@ function MessageText({ entry }: { entry: ParsedLogEntry }) {
 
   // Error / exit code
   const colorMap: Record<string, string> = {
-    error:   "text-red-300",
-    warn:    "text-yellow-300",
-    success: "text-emerald-300",
-    info:    "text-slate-300",
+    error:   "text-red-600 dark:text-red-300",
+    warn:    "text-yellow-600 dark:text-yellow-300",
+    success: "text-emerald-600 dark:text-emerald-300",
+    info:    "text-foreground/80",
   };
-  const color = colorMap[level] ?? "text-slate-300";
+  const color = colorMap[level] ?? "text-foreground/80";
 
   return (
     <span className={`text-[12px] ${color} leading-snug break-words`}>
@@ -112,16 +112,16 @@ export function LogEntry({ entry, showComponent = true }: LogEntryProps) {
   // Agent block header — special styling
   if (agentBlock) {
     const blockColors: Record<string, string> = {
-      thinking: "border-purple-500/40 bg-purple-950/30",
-      plan:     "border-blue-500/40   bg-blue-950/30",
-      response: "border-green-500/40  bg-green-950/30",
+      thinking: "border-purple-500/40 bg-purple-500/10 dark:bg-purple-950/30",
+      plan:     "border-blue-500/40 bg-blue-500/10 dark:bg-blue-950/30",
+      response: "border-green-500/40 bg-green-500/10 dark:bg-green-950/30",
     };
-    const cls = blockColors[agentBlock] ?? "border-slate-600 bg-slate-900/30";
+    const cls = blockColors[agentBlock] ?? "border-muted-foreground/30 bg-muted/50";
     return (
       <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${cls} my-1`}>
         <AgentBlockIcon block={agentBlock} />
         <MessageText entry={entry} />
-        <span className="ml-auto text-[10px] text-slate-600 font-mono shrink-0">
+        <span className="ml-auto text-[10px] text-muted-foreground/70 font-mono shrink-0">
           {new Date(timestamp).toLocaleTimeString()}
         </span>
       </div>
@@ -138,22 +138,22 @@ export function LogEntry({ entry, showComponent = true }: LogEntryProps) {
   const border = levelBorder[level] ?? "border-l-transparent";
 
   return (
-    <div className={`flex items-start gap-2 px-3 py-1.5 border-l-2 ${border} hover:bg-white/[0.02] transition-colors group`}>
+    <div className={`flex items-start gap-2 px-3 py-1.5 border-l-2 ${border} hover:bg-foreground/[0.03] transition-colors group`}>
       {/* Timestamp */}
-      <span className="text-[10px] text-slate-600 font-mono shrink-0 mt-0.5 w-[68px]">
+      <span className="text-[10px] text-muted-foreground/70 font-mono shrink-0 mt-0.5 w-[68px]">
         {new Date(timestamp).toLocaleTimeString()}
       </span>
 
       {/* Component badge */}
       {showComponent && component && (
-        <ComponentBadge tag={component} />
+        <ComponentBadge tag={component} size="md" />
       )}
 
       {/* Bash action tag */}
       {bashAction && (
         <span className="flex items-center gap-1 shrink-0">
           <BashIcon action={bashAction} direction={bashDirection} />
-          <span className="text-[10px] font-mono text-slate-500 hidden group-hover:inline">
+          <span className="text-[10px] font-mono text-muted-foreground hidden group-hover:inline">
             {bashAction}
           </span>
         </span>

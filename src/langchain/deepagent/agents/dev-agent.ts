@@ -56,6 +56,9 @@ export class DeepDevAgent implements Agent {
 
         // Intercept and sanitize inputs to prevent invalid media types from reaching the API,
         // and log any thinking blocks returned by the LLM.
+        // Option 5: flag — first text block from the LLM is the agent's plan
+        let firstTextLogged = false;
+
         const originalInvoke = llm.invoke.bind(llm);
         llm.invoke = async function (input, options) {
             const result = await originalInvoke(sanitizeMessages(input), options);
@@ -67,9 +70,16 @@ export class DeepDevAgent implements Agent {
                             console.log(block.thinking);
                             console.log(`╰────────────────────────────────────────────────────────────`);
                         } else if (block.type === "text" && typeof block.text === "string" && block.text.trim()) {
-                            console.log(`\n╭─ 🤖 Agent Response ────────────────────────────────────────`);
-                            console.log(block.text);
-                            console.log(`╰────────────────────────────────────────────────────────────`);
+                            if (!firstTextLogged) {
+                                firstTextLogged = true;
+                                console.log(`\n╭─ 📋 Agent Plan ────────────────────────────────────────────`);
+                                console.log(block.text);
+                                console.log(`╰────────────────────────────────────────────────────────────`);
+                            } else {
+                                console.log(`\n╭─ 🤖 Agent Response ────────────────────────────────────────`);
+                                console.log(block.text);
+                                console.log(`╰────────────────────────────────────────────────────────────`);
+                            }
                         }
                     }
                 }
@@ -99,7 +109,9 @@ export class DeepDevAgent implements Agent {
                                         inThinking = false;
                                     }
                                     if (!inText) {
-                                        console.log(`\n╭─ 🤖 Agent Response ────────────────────────────────────────`);
+                                        const label = firstTextLogged ? "🤖 Agent Response" : "📋 Agent Plan    ";
+                                        firstTextLogged = true;
+                                        console.log(`\n╭─ ${label} ────────────────────────────────────────`);
                                         inText = true;
                                     }
                                     process.stdout.write(block.text);

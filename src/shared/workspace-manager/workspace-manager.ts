@@ -25,7 +25,7 @@ const JOBS_DIR = process.env.JOBS_DIR ?? "/workspace/jobs";
 export async function setupWorkspace(story: JiraStory): Promise<Workspace> {
     const jobId = `job-${story.id}-${Date.now()}`;
     const jobDir = path.join(JOBS_DIR, jobId);
-    const branch = `${GIT_BRANCH_PREFIX}${story.id}`;
+    const branch = `${GIT_BRANCH_PREFIX}${jobId}`;
     const remoteUrl = buildRemoteUrl(story.repoUrl);
 
     console.log(`[workspace] [${jobId}] Ensuring jobs dir exists: ${JOBS_DIR}`);
@@ -80,7 +80,7 @@ export async function pushAndTeardown(workspace: Workspace): Promise<void> {
     } catch (err) {
         console.error(`[workspace] [${workspace.jobId}] Push failed — proceeding with teardown:`, err);
     }
-    await removeClone(workspace.jobDir, workspace.jobId);
+    // await removeClone(workspace.jobDir, workspace.jobId);
 }
 
 /**
@@ -89,5 +89,5 @@ export async function pushAndTeardown(workspace: Workspace): Promise<void> {
  */
 export async function teardownWorkspace(workspace: Workspace): Promise<void> {
     console.log(`[workspace] [${workspace.jobId}] Tearing down workspace (no push)`);
-    await removeClone(workspace.jobDir, workspace.jobId);
+    // await removeClone(workspace.jobDir, workspace.jobId);
 }

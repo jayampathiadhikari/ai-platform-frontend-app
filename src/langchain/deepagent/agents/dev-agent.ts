@@ -1,17 +1,10 @@
 import { createDeepAgent, FilesystemBackend } from "deepagents";
 import { ChatAnthropic } from "@langchain/anthropic";
-import { tool } from "@langchain/core/tools";
-import { z } from "zod";
-import path from "path";
-import fs from "fs/promises";
-import { exec } from "child_process";
-import { promisify } from "util";
 
 import type { JiraStory, Workspace } from "../../../shared/workspace-manager/types.js";
-import type { Agent, JobResult, ReviewVerdict } from "../../types.js";
-import { checkBashGuard } from "../guardrails/bash-guard.js";
-
-const execAsync = promisify(exec);
+import type { Agent, JobResult } from "../../types.js";
+import { makeBashTool } from "./helpers/bash-runner.js";
+import { extractFinalText, parseVerdict } from "./helpers/message-utils.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -56,47 +49,6 @@ Do NOT push to main, master, or develop — only push to the current agent branc
 
 Start by using write_todos to plan your approach, then execute each step.
 `;
-
-// ---------------------------------------------------------------------------
-// Tool factory: workspace-scoped bash
-// ---------------------------------------------------------------------------
-
-function makeBashTool(cwd: string) {
-    return tool(
-        async ({ command, timeout }: { command: string; timeout?: number }) => {
-            const guard = checkBashGuard(command);
-            if (guard.blocked) {
-                console.warn(`[deepagent:bash] Blocked: ${command.slice(0, 120)}\n  Reason: ${guard.reason}`);
-                return `BLOCKED: ${guard.reason}`;
-            }
-
-            console.log(`[deepagent:bash] Executing: ${command.slice(0, 200)}`);
-            try {
-                const { stdout, stderr } = await execAsync(command, {
-                    cwd,
-                    timeout: timeout ?? 30_000,
-                    maxBuffer: 10 * 1024 * 1024,
-                });
-                const out = [stdout, stderr].filter(Boolean).join("\n---stderr---\n");
-                return out || "(no output)";
-            } catch (err: unknown) {
-                const e = err as { message?: string; stdout?: string; stderr?: string };
-                return `ERROR: ${e.message ?? String(err)}\n${e.stderr ?? ""}`.trim();
-            }
-        },
-        {
-            name: "bash",
-            description:
-                "Run a bash shell command inside the workspace directory. " +
-                "Use for git, npm, running tests, etc. " +
-                "Dangerous commands (sudo, force-push, rm -rf /, curl|sh, etc.) are blocked.",
-            schema: z.object({
-                command: z.string().describe("The bash command to execute"),
-                timeout: z.number().optional().default(30_000).describe("Timeout in milliseconds"),
-            }),
-        }
-    );
-}
 
 // ---------------------------------------------------------------------------
 // DeepDevAgent — uses the official `deepagents` `createDeepAgent` harness
@@ -212,7 +164,7 @@ Begin by using write_todos to plan your work, then implement the story step by s
         );
 
         // ── Parse verdict from REVIEW.json ───────────────────────────────────
-        const verdict = await this.parseVerdict(jobDir, this.extractFinalText(messages));
+        const verdict = await parseVerdict(jobDir, extractFinalText(messages));
         console.log(`[deepagent] [${jobId}] Verdict: ${verdict.verdict}${verdict.reason ? ` — ${verdict.reason}` : ""}`);
 
         return {
@@ -222,43 +174,5 @@ Begin by using write_todos to plan your work, then implement the story step by s
             costUsd: 0, // deepagents SDK does not expose token counts directly
             turns:   aiTurns,
         };
-    }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private extractFinalText(messages: unknown[]): string {
-        const aiMsgs = messages.filter(
-            (m: unknown) => (m as { role?: string }).role === "assistant"
-                || (typeof (m as { _getType?: () => string })._getType === "function"
-                    && (m as { _getType(): string })._getType() === "ai")
-        );
-        if (aiMsgs.length === 0) return "";
-
-        const last    = aiMsgs[aiMsgs.length - 1] as { content: unknown };
-        const content = last.content;
-        if (typeof content === "string") return content;
-        if (Array.isArray(content)) {
-            return (content as { type?: string; text?: string }[])
-                .filter((b) => b.type === "text")
-                .map((b)   => b.text ?? "")
-                .join("\n");
-        }
-        return "";
-    }
-
-    private async parseVerdict(jobDir: string, finalText: string): Promise<ReviewVerdict> {
-        const reviewPath = path.join(jobDir, "REVIEW.json");
-        try {
-            const raw  = await fs.readFile(reviewPath, "utf8");
-            const json = JSON.parse(raw) as ReviewVerdict;
-            console.log("[deepagent] REVIEW.json read successfully");
-            return json;
-        } catch {
-            console.warn("[deepagent] REVIEW.json not found — inferring verdict from final message");
-            const lower = finalText.toLowerCase();
-            if (lower.includes("pass"))    return { verdict: "PASS",    reason: "inferred from output" };
-            if (lower.includes("partial")) return { verdict: "PARTIAL", reason: "inferred from output" };
-            return { verdict: "FAIL", reason: "REVIEW.json not found" };
-        }
     }
 }

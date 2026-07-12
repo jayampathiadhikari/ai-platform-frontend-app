@@ -95,6 +95,33 @@ services:
       - agent-net
 
 
+  # ── Monitor UI ───────────────────────────────────────────────────────────────
+  monitor:
+    build:
+      context: ./monitor
+      dockerfile: Dockerfile
+    image: deepagent-monitor:local
+    container_name: deepagent-monitor
+
+    ports:
+      - "3001:3001"               # UI accessible at http://localhost:3001
+
+    environment:
+      NODE_ENV:   "production"
+      PORT:       "3001"
+      # Reach agent SSE endpoint over the internal Docker network
+      AGENT_URL:  "http://agent:3000"
+
+    depends_on:
+      agent:
+        condition: service_started
+
+    restart: unless-stopped
+
+    networks:
+      - agent-net
+
+
 # ── Shared volume ────────────────────────────────────────────────────────────
 volumes:
   jobs:

@@ -66,19 +66,13 @@ export class DeepDevAgent implements Agent {
                 for (const block of result.content) {
                     if (block && typeof block === "object") {
                         if (block.type === "thinking" && typeof block.thinking === "string") {
-                            console.log(`\n╭─ 🧠 Agent Thinking ────────────────────────────────────────`);
-                            console.log(block.thinking);
-                            console.log(`╰────────────────────────────────────────────────────────────`);
+                            console.log(`[deepagent:thinking] ${block.thinking.replace(/\n/g, " ").trim()}`);
                         } else if (block.type === "text" && typeof block.text === "string" && block.text.trim()) {
                             if (!firstTextLogged) {
                                 firstTextLogged = true;
-                                console.log(`\n╭─ 📋 Agent Plan ────────────────────────────────────────────`);
-                                console.log(block.text);
-                                console.log(`╰────────────────────────────────────────────────────────────`);
+                                console.log(`[deepagent:plan] ${block.text.replace(/\n/g, " ").trim()}`);
                             } else {
-                                console.log(`\n╭─ 🤖 Agent Response ────────────────────────────────────────`);
-                                console.log(block.text);
-                                console.log(`╰────────────────────────────────────────────────────────────`);
+                                console.log(`[deepagent:response] ${block.text.replace(/\n/g, " ").trim()}`);
                             }
                         }
                     }
@@ -91,6 +85,8 @@ export class DeepDevAgent implements Agent {
         llm.stream = async function (input, options) {
             const stream = await originalStream(sanitizeMessages(input), options);
             async function* wrapperGenerator() {
+                let thinkingBuf = "";
+                let textBuf = "";
                 let inThinking = false;
                 let inText = false;
                 for await (const chunk of stream) {
@@ -98,31 +94,31 @@ export class DeepDevAgent implements Agent {
                         for (const block of chunk.content) {
                             if (block && typeof block === "object") {
                                 if (block.type === "thinking" && typeof block.thinking === "string") {
-                                    if (!inThinking) {
-                                        console.log(`\n╭─ 🧠 Agent Thinking ────────────────────────────────────────`);
-                                        inThinking = true;
-                                    }
-                                    process.stdout.write(block.thinking);
+                                    inThinking = true;
+                                    thinkingBuf += block.thinking;
                                 } else if (block.type === "text" && typeof block.text === "string" && block.text) {
                                     if (inThinking) {
-                                        console.log(`\n╰────────────────────────────────────────────────────────────`);
+                                        // Flush accumulated thinking as a single structured line
+                                        console.log(`[deepagent:thinking] ${thinkingBuf.replace(/\n/g, " ").trim()}`);
+                                        thinkingBuf = "";
                                         inThinking = false;
                                     }
-                                    if (!inText) {
-                                        const label = firstTextLogged ? "🤖 Agent Response" : "📋 Agent Plan    ";
-                                        firstTextLogged = true;
-                                        console.log(`\n╭─ ${label} ────────────────────────────────────────`);
-                                        inText = true;
-                                    }
-                                    process.stdout.write(block.text);
+                                    inText = true;
+                                    textBuf += block.text;
                                 }
                             }
                         }
                     }
                     yield chunk;
                 }
-                if (inThinking || inText) {
-                    console.log(`\n╰────────────────────────────────────────────────────────────\n`);
+                // Flush remaining text buffer as plan or response
+                if (textBuf.trim()) {
+                    const tag = firstTextLogged ? "[deepagent:response]" : "[deepagent:plan]";
+                    firstTextLogged = true;
+                    console.log(`${tag} ${textBuf.replace(/\n/g, " ").trim()}`);
+                }
+                if (inThinking && thinkingBuf.trim()) {
+                    console.log(`[deepagent:thinking] ${thinkingBuf.replace(/\n/g, " ").trim()}`);
                 }
             }
             return IterableReadableStream.fromAsyncGenerator(wrapperGenerator());

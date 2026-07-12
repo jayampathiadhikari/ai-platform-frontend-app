@@ -13,6 +13,36 @@ const PORT = process.env.PORT ?? 3000;
 app.use(express.json());
 
 // ---------------------------------------------------------------------------
+// SSE log broadcaster — intercepts console output and fans it out to any
+// connected monitor clients over GET /logs/stream.
+// ---------------------------------------------------------------------------
+const LOG_BUFFER_SIZE = 500;
+const logBuffer: string[] = [];                       // ring-buffer of recent lines
+const sseClients = new Set<Response>();               // active SSE connections
+
+function broadcastLog(line: string) {
+  // Keep ring buffer
+  logBuffer.push(line);
+  if (logBuffer.length > LOG_BUFFER_SIZE) logBuffer.shift();
+
+  // Fan out to connected clients
+  const payload = `data: ${JSON.stringify({ line, source: "deepagent-agent" })}\n\n`;
+  for (const res of sseClients) {
+    try { res.write(payload); } catch { sseClients.delete(res); }
+  }
+}
+
+// Patch console methods to also send to broadcaster
+(["log", "warn", "error", "info", "debug"] as const).forEach(method => {
+  const original = console[method].bind(console);
+  console[method] = (...args: unknown[]) => {
+    original(...args);
+    const line = args.map(a => (typeof a === "string" ? a : JSON.stringify(a))).join(" ");
+    broadcastLog(line);
+  };
+});
+
+// ---------------------------------------------------------------------------
 // POST /run  — start a new job
 // ---------------------------------------------------------------------------
 app.post("/run", async (req: Request, res: Response) => {
@@ -119,6 +149,35 @@ app.get("/jobs/:id", (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 app.get("/jobs", (_req: Request, res: Response) => {
   res.json({ ok: true, jobs: listJobs() });
+});
+
+// ---------------------------------------------------------------------------
+// GET /logs/stream  — SSE stream of all console output (for the monitor UI)
+// ---------------------------------------------------------------------------
+app.get("/logs/stream", (req: Request, res: Response) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
+
+  // Replay recent buffer to the new client
+  for (const line of logBuffer) {
+    res.write(`data: ${JSON.stringify({ line, source: "deepagent-agent" })}\n\n`);
+  }
+
+  sseClients.add(res);
+
+  // Heartbeat every 15 s
+  const hb = setInterval(() => {
+    try { res.write(": heartbeat\n\n"); } catch { /* ignore */ }
+  }, 15_000);
+
+  req.on("close", () => {
+    sseClients.delete(res);
+    clearInterval(hb);
+  });
 });
 
 // ---------------------------------------------------------------------------

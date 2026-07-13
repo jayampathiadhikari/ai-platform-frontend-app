@@ -89,7 +89,27 @@ export default function Dashboard() {
         <div className="max-w-4xl mx-auto px-4 py-4 flex flex-col gap-4">
           {jobs.length === 0
             ? <EmptyState connected={connected} />
-            : jobs.map(job => <JobCard key={job.jobId} job={job} />)
+            : (() => {
+                const realJobs = jobs.filter(j => j.jobId !== "__global__");
+                const globalJob = jobs.find(j => j.jobId === "__global__");
+                return (
+                  <>
+                    {realJobs.map(job => <JobCard key={job.jobId} job={job} />)}
+                    {globalJob && (
+                      <>
+                        {realJobs.length > 0 && (
+                          <div className="flex items-center gap-3 px-1">
+                            <div className="flex-1 h-px bg-border/40" />
+                            <span className="text-[10px] text-muted-foreground/40 uppercase tracking-widest font-medium">System Console</span>
+                            <div className="flex-1 h-px bg-border/40" />
+                          </div>
+                        )}
+                        <JobCard key={globalJob.jobId} job={globalJob} />
+                      </>
+                    )}
+                  </>
+                );
+              })()
           }
         </div>
       </ScrollArea>

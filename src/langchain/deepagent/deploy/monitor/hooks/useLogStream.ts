@@ -113,10 +113,21 @@ export function useLogStream() {
     return () => es.close();
   }, [connect]);
 
-  // Sort jobs: running first, then by startedAt desc
+  // Sort jobs:
+  //  1. Real running jobs (newest first)
+  //  2. Real finished jobs (newest first)
+  //  3. __global__ (system console) always pinned to bottom
   const jobList = Array.from(jobs.values())
     .filter(j => j.jobId !== ORPHAN_JOB_ID || j.entries.length > 0)
     .sort((a, b) => {
+      const aIsGlobal = a.jobId === ORPHAN_JOB_ID;
+      const bIsGlobal = b.jobId === ORPHAN_JOB_ID;
+
+      // __global__ always sinks to the bottom
+      if (aIsGlobal && !bIsGlobal) return 1;
+      if (bIsGlobal && !aIsGlobal) return -1;
+
+      // Among real jobs: running first, then finished by recency
       if (a.status === "running" && b.status !== "running") return -1;
       if (b.status === "running" && a.status !== "running") return 1;
       return new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime();

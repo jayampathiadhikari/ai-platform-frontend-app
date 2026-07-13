@@ -6,7 +6,7 @@ import { LogEntry } from "./LogEntry";
 import { ComponentBadge } from "./ComponentBadge";
 import {
   CheckCircle2, XCircle, Clock, GitPullRequest, ChevronDown, ChevronRight,
-  Loader2, AlertTriangle,
+  Loader2, AlertTriangle, Terminal,
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -73,7 +73,9 @@ interface JobCardProps {
 }
 
 export function JobCard({ job }: JobCardProps) {
-  const [expanded, setExpanded] = useState(true);
+  const isGlobal = job.jobId === "__global__";
+  // Global card collapsed by default — it's background noise
+  const [expanded, setExpanded] = useState(!isGlobal);
 
   const elapsed = job.finishedAt
     ? Math.round((new Date(job.finishedAt).getTime() - new Date(job.startedAt).getTime()) / 1000)
@@ -90,6 +92,45 @@ export function JobCard({ job }: JobCardProps) {
     failed: "shadow-red-500/10 border-red-500/20",
   };
   const glow = glowMap[job.status] ?? "";
+
+  // Global card gets a muted, secondary look so it doesn't compete with job cards
+  if (isGlobal) {
+    return (
+      <Card className="bg-muted/30 border border-dashed border-border/50 shadow-none opacity-70 hover:opacity-100 transition-opacity duration-300">
+        <CardHeader className="pb-2 pt-3 px-4">
+          <div className="flex items-center gap-2">
+            <Terminal className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <span className="text-xs font-semibold text-muted-foreground flex-1 tracking-wide">Server</span>
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
+                <Clock className="w-3 h-3" />
+                {elapsed}s
+              </span>
+              <button
+                onClick={() => setExpanded(e => !e)}
+                className="text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                aria-label={expanded ? "Collapse" : "Expand"}
+              >
+                {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+        </CardHeader>
+        {expanded && (
+          <>
+            <Separator className="bg-border/30" />
+            <CardContent className="p-0 pb-2">
+              <div className="flex flex-col">
+                {job.entries.map(entry => (
+                  <LogEntry key={entry.id} entry={entry} showComponent />
+                ))}
+              </div>
+            </CardContent>
+          </>
+        )}
+      </Card>
+    );
+  }
 
   return (
     <Card className={`bg-card border shadow-lg ${glow} transition-all duration-500`}>

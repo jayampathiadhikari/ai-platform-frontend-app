@@ -4,7 +4,7 @@ import type { ParsedLogEntry } from "@/lib/types";
 import { ComponentBadge } from "./ComponentBadge";
 import {
   GitCommit, GitBranch, FilePlus, Package, FileEdit,
-  ChevronRight, Brain, ClipboardList, MessageSquare,
+  ChevronRight,
   Terminal, AlertCircle, CheckCircle2,
   ArrowRight, ArrowLeft, Info,
 } from "lucide-react";
@@ -27,12 +27,6 @@ function BashIcon({ action, direction }: { action?: string; direction?: "→" | 
   return <Terminal className="w-3.5 h-3.5 text-muted-foreground" />;
 }
 
-function AgentBlockIcon({ block }: { block?: string }) {
-  if (block === "thinking") return <Brain className="w-4 h-4 text-purple-400" />;
-  if (block === "plan")     return <ClipboardList className="w-4 h-4 text-blue-400" />;
-  if (block === "response") return <MessageSquare className="w-4 h-4 text-green-400" />;
-  return null;
-}
 
 function LevelIcon({ level }: { level: string }) {
   if (level === "error")   return <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />;
@@ -50,15 +44,15 @@ function truncate(s: string, max = 320) {
 function MessageText({ entry }: { entry: ParsedLogEntry }) {
   const { agentBlock, bashAction, bashDirection, message, level, exitCode } = entry;
 
-  // Agent block header — prominent display
+  // Agent block header — shown as a slim phase-change divider
   if (agentBlock) {
     const labels: Record<string, string> = {
-      thinking: "Agent is thinking…",
-      plan:     "Agent plan",
-      response: "Agent response",
+      thinking: "Thinking (Agent is reasoning internally before acting)",
+      plan:     "Acting on plan (Agent is executing tools & shell commands)",
+      response: "Responding (Agent is summarising results & wrapping up)",
     };
     return (
-      <span className="italic text-foreground/80 font-medium">{labels[agentBlock] ?? message}</span>
+      <span className="text-[11px] text-muted-foreground/70 font-medium">{labels[agentBlock] ?? message}</span>
     );
   }
 
@@ -109,21 +103,23 @@ interface LogEntryProps {
 export function LogEntry({ entry, showComponent = true }: LogEntryProps) {
   const { component, bashAction, bashDirection, agentBlock, level, timestamp } = entry;
 
-  // Agent block header — special styling
+  // Agent block — slim phase-change divider, not a section container
   if (agentBlock) {
-    const blockColors: Record<string, string> = {
-      thinking: "border-purple-500/40 bg-purple-500/10 dark:bg-purple-950/30",
-      plan:     "border-blue-500/40 bg-blue-500/10 dark:bg-blue-950/30",
-      response: "border-green-500/40 bg-green-500/10 dark:bg-green-950/30",
+    const blockStyles: Record<string, { dot: string; line: string }> = {
+      thinking: { dot: "bg-purple-400/70",  line: "border-purple-400/20" },
+      plan:     { dot: "bg-blue-400/70",    line: "border-blue-400/20"   },
+      response: { dot: "bg-emerald-400/70", line: "border-emerald-400/20" },
     };
-    const cls = blockColors[agentBlock] ?? "border-muted-foreground/30 bg-muted/50";
+    const style = blockStyles[agentBlock] ?? { dot: "bg-muted-foreground/40", line: "border-muted-foreground/20" };
     return (
-      <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${cls} my-1`}>
-        <AgentBlockIcon block={agentBlock} />
+      <div className="flex items-center gap-2 px-3 py-1 my-0.5">
+        <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${style.dot}`} />
+        <div className={`flex-1 border-t border-dashed ${style.line}`} />
         <MessageText entry={entry} />
-        <span className="ml-auto text-[10px] text-muted-foreground/70 font-mono shrink-0">
+        <span className="text-[10px] text-muted-foreground/50 font-mono shrink-0">
           {new Date(timestamp).toLocaleTimeString()}
         </span>
+        <div className={`flex-1 border-t border-dashed ${style.line}`} />
       </div>
     );
   }
